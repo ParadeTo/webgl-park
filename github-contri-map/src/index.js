@@ -3,6 +3,8 @@ import vShader from './vShader'
 
 class GithubContriMap {
   constructor() {
+    fetch('/api/paradeto/2021')
+
     const canvas = document.getElementById('webgl')
     const h = document.documentElement.clientHeight
     const w = document.documentElement.clientWidth
@@ -43,17 +45,106 @@ class GithubContriMap {
     this.setLight()
 
     // Draw a point
-    this.drawCubic({x: 0})
+    // this.drawCubic({x: 0})
     this.drawCubic({x: 10, h: 6})
-    this.drawCubic({z: 10, h: 4})
+    // this.drawCubic({z: 10, h: 4})
     // this.drawCubic()
     // this.drawCubic()
     // this.drawCubic()
     // this.drawCubic()
+    this.drawTrapezoid()
+  }
+
+  drawHexahedron({vertexs, normals, colors, setModelMatrix}) {
+    const {gl} = this
+    if (!this.initArrayBuffer('aPosition', vertexs, gl.FLOAT, 3)) return
+    if (!this.initArrayBuffer('aNormal', normals, gl.FLOAT, 3)) return
+    if (!this.initArrayBuffer('aColor', colors, gl.FLOAT, 3)) return
+
+    // prettier-ignore
+    var indices = new Uint8Array([
+      0, 1, 2,   0, 2, 3,    // front
+      4, 5, 6,   4, 6, 7,    // right
+      8, 9,10,   8,10,11,    // up
+      12,13,14,  12,14,15,    // left
+      16,17,18,  16,18,19,    // down
+      20,21,22,  20,22,23     // back
+    ]);
+    this.setModelMatrix(setModelMatrix)
+    const n = this.initElementArrayBuffer(indices)
+    gl.drawElements(gl.TRIANGLES, n, gl.UNSIGNED_BYTE, 0)
+  }
+
+  drawTrapezoid() {
+    // prettier-ignore
+    const vertexs = new Float32Array([
+      1.0, 1.0, 1.0,  -1.0, 1.0, 1.0,  -1.5,-1.0, 1.5,   1.5,-1.0, 1.5, // v0-v1-v2-v3 front
+      1.0, 1.0, 1.0,   1.5,-1.0, 1.5,   1.5,-1.0,-1.5,   1.0, 1.0,-1.0, // v0-v3-v4-v5 right
+      1.0, 1.0, 1.0,   1.0, 1.0,-1.0,  -1.0, 1.0,-1.0,  -1.0, 1.0, 1.0, // v0-v5-v6-v1 up
+      -1.0, 1.0, 1.0,  -1.0, 1.0,-1.0,  -1.5,-1.0,-1.5,  -1.5,-1.0, 1.5, // v1-v6-v7-v2 left
+      -1.5,-1.0,-1.5,   1.5,-1.0,-1.5,   1.5,-1.0, 1.5,  -1.5,-1.0, 1.5, // v7-v4-v3-v2 down
+      1.5,-1.0,-1.5,  -1.5,-1.0,-1.5,  -1.0, 1.0,-1.0,   1.0, 1.0,-1.0  // v4-v7-v6-v5 back
+    ])
+    /**
+     *  v0v1 = (-2, 0, 0)
+     *  v0v3 = (0.5,-2,0.5)
+     *  v0v1 × v0v3 = (0, 1, 4)
+     */
+    const v0 = new Vector3(vertexs.slice(0, 3))
+    const v1 = new Vector3(vertexs.slice(3, 6))
+    const v2 = new Vector3(vertexs.slice(6, 9))
+    const v3 = new Vector3(vertexs.slice(9, 12))
+    const v4 = new Vector3(vertexs.slice(18, 21))
+    const v5 = new Vector3(vertexs.slice(21, 24))
+    const v6 = new Vector3(vertexs.slice(20, 33))
+    // front
+    const v0v1 = v1.sub(v0)
+    const v0v3 = v3.sub(v0)
+    const fNormal = v0v1.cross(v0v3).repeat(4)
+    // right
+    const v0v5 = v5.sub(v0)
+    const rNormal = v0v3.cross(v0v5).repeat(4)
+    // up
+    const uNormal = v0v5.cross(v0v1).repeat(4)
+    // left
+    const v1v6 = v6.sub(v1)
+    const v1v2 = v2.sub(v1)
+    const lNormal = v1v6.cross(v1v2).repeat(4)
+    // down
+    const v3v4 = v4.sub(v3)
+    const v3v2 = v2.sub(v3)
+    const dNormal = v3v2.cross(v3v4).repeat(4)
+    // back
+    const v5v4 = v4.sub(v5)
+    const v5v6 = v6.sub(v5)
+    const bNormal = v5v4.cross(v5v6).repeat(4)
+    const normals = new Float32Array([
+      ...fNormal,
+      ...rNormal,
+      ...uNormal,
+      ...lNormal,
+      ...dNormal,
+      ...bNormal,
+    ])
+
+    // prettier-ignore
+    const colors = new Float32Array([
+      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v0-v1-v2-v3 front
+      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v0-v3-v4-v5 right
+      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v0-v5-v6-v1 up
+      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v1-v6-v7-v2 left
+      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v7-v4-v3-v2 down
+      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0   // v4-v7-v6-v5 back
+    ])
+
+    this.drawHexahedron({
+      vertexs,
+      normals,
+      colors,
+    })
   }
 
   drawCubic({x = 0, y = 0, z = 0, w = 1, h = 1, l = 1}) {
-    const {gl} = this
     //    v6----- v5
     //   /|      /|
     //  v1------v0|
@@ -90,35 +181,29 @@ class GithubContriMap {
       1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v7-v4-v3-v2 down
       1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0   // v4-v7-v6-v5 back
     ])
-
-    if (!this.initArrayBuffer('aPosition', vertexs, gl.FLOAT, 3)) return
-    if (!this.initArrayBuffer('aNormal', normals, gl.FLOAT, 3)) return
-    if (!this.initArrayBuffer('aColor', colors, gl.FLOAT, 3)) return
-
-    // Indices of the vertices
-    // prettier-ignore
-    var indices = new Uint8Array([
-      0, 1, 2,   0, 2, 3,    // front
-      4, 5, 6,   4, 6, 7,    // right
-      8, 9,10,   8,10,11,    // up
-      12,13,14,  12,14,15,    // left
-      16,17,18,  16,18,19,    // down
-      20,21,22,  20,22,23     // back
-    ]);
-
-    this.setModelMatrix((modelMatrix) => {
-      modelMatrix.setTranslate(x, y, z).translate(0, h, 0).scale(w, h, l)
+    this.drawHexahedron({
+      vertexs,
+      normals,
+      colors,
+      setModelMatrix: (modelMatrix) => {
+        modelMatrix.setTranslate(x, y, z).translate(0, h, 0).scale(w, h, l)
+      },
     })
-
-    const n = this.initElementArrayBuffer(indices)
-    gl.drawElements(gl.TRIANGLES, n, gl.UNSIGNED_BYTE, 0)
   }
 
   setLight() {
     const uLightDirection = this.getVarLocation('uLightDirection', 'Uniform')
     const uLightColor = this.getVarLocation('uLightColor', 'Uniform')
-    this.gl.uniform3f(uLightDirection, 0, 10, 10)
-    this.gl.uniform3f(uLightColor, 0.5, 0.5, 0.5)
+    const uAmbientLightColor = this.getVarLocation(
+      'uAmbientLightColor',
+      'Uniform'
+    )
+    this.gl.uniform3f(
+      uLightDirection,
+      ...new Vector3([0, 10, 10]).normalize().elements
+    )
+    this.gl.uniform3f(uLightColor, 1, 1, 1)
+    this.gl.uniform3f(uAmbientLightColor, 0.3, 0.3, 0.3)
   }
 
   getVarLocation(name, type = 'Attrib') {
@@ -133,7 +218,7 @@ class GithubContriMap {
     const {gl} = this
     const modelMatrix = new Matrix4()
     const uModelMatrix = this.getVarLocation('uModelMatrix', 'Uniform')
-    fn(modelMatrix)
+    fn && fn(modelMatrix)
     gl.uniformMatrix4fv(uModelMatrix, false, modelMatrix.elements)
   }
 

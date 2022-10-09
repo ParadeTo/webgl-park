@@ -29,5 +29,10 @@ module.exports = {
     static: {
       directory: path.resolve(__dirname, '../'),
     },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+      },
+    },
   },
 }
