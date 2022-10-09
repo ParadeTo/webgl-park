@@ -1,4 +1,5 @@
 attribute vec4 aPosition;
+attribute vec4 aNormal;
 uniform mat4 uModelMatrix;
 void main(){
   // gl_Position = uModelMatrix * aPosition;
