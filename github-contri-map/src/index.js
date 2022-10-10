@@ -3,16 +3,20 @@ import vShader from './vShader'
 
 class GithubContriMap {
   constructor() {
-    const canvas = document.getElementById('webgl')
     const h = document.documentElement.clientHeight
     const w = document.documentElement.clientWidth
-    const min = Math.min(h, w)
-    canvas.width = min
-    canvas.height = min
+    this.canvas = document.getElementById('webgl')
+    this.canvas.width = w
+    this.canvas.height = h
 
-    // Get the rendering context for WebGL
-    const gl = getWebGLContext(canvas)
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
+    this.pillarSize = 4
+    this.pillarGap = 0
+    this.padding = 2
+    this.trapezoidDiffOfUpAndDown = 3
+    this.trapezoidHeight = 10
+    this.weeks = 53
+
+    const gl = getWebGLContext(this.canvas)
     if (!gl) {
       console.log('Failed to get the rendering context for WebGL')
       return
@@ -31,6 +35,11 @@ class GithubContriMap {
     this.setViewMatrix()
     this.setLight()
     this.draw()
+
+    // this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
+    // this.gl.clear(this.gl.COLOR_BUFFER_BIT)
+    // this.gl.enable(this.gl.DEPTH_TEST)
+    // this.drawCubic()
   }
 
   async draw() {
@@ -39,25 +48,37 @@ class GithubContriMap {
     try {
       const rsp = await fetch('/api/paradeto/2021')
       const {contributions} = await rsp.json()
-      debugger
       if (contributions) {
-        // Specify the color for clearing <canvas>
         gl.clearColor(0.0, 0.0, 0.0, 1.0)
-
-        // Clear <canvas>
         gl.clear(gl.COLOR_BUFFER_BIT)
         gl.enable(gl.DEPTH_TEST)
-        this.drawCubic()
         contributions.forEach(({week, days}) => {
           for (let i = 0, len = days.length; i < len; i++) {
             const {count} = days[i]
-            if (week < 52)
-              this.drawCubic({x: week * 3, z: (7 - len + i) * 3, h: count})
-            else this.drawCubic({x: week * 3, z: i * 3, h: count})
+            if (week < this.weeks - 1)
+              this.drawCubic({
+                x: week * (this.pillarSize + this.pillarGap),
+                z: (7 - len + i) * (this.pillarSize + this.pillarGap),
+                h: count,
+                l: this.pillarSize / 2,
+                w: this.pillarSize / 2,
+              })
+            else
+              this.drawCubic({
+                x: week * (this.pillarSize + this.pillarGap),
+                z: i * (this.pillarSize + this.pillarGap),
+                h: count,
+                l: this.pillarSize / 2,
+                w: this.pillarSize / 2,
+              })
           }
         })
         this.drawTrapezoid((matrix) => {
-          // matrix.setTranslate(-1, -2, 0).translate(52, 0, 10).scale(52, 2, 12)
+          matrix.translate(
+            -(((this.weeks - 1) * (this.pillarSize + this.pillarGap)) / 2),
+            0,
+            0
+          )
         })
       }
     } catch (error) {
@@ -99,15 +120,42 @@ class GithubContriMap {
      *  v0v3 = (0.5,-2,0.5)
      *  v0v1 × v0v3 = (0, 1, 4)
      */
-    const v0 = new Vector3(159, 0, 21)
-    const v1 = new Vector3(-3.0, 0, 21)
-    const v2 = new Vector3(-6.0, -4, 24)
-    const v3 = new Vector3(162, -4, 24)
-    const v4 = new Vector3(162, -4, -6)
-    const v5 = new Vector3(159, 0, -3)
-    const v6 = new Vector3(-3, 0, -3)
-    const v7 = new Vector3(-6, -4, -6)
-
+    const {
+      pillarGap,
+      pillarSize,
+      padding,
+      trapezoidHeight,
+      trapezoidDiffOfUpAndDown,
+      weeks,
+    } = this
+    const step = pillarGap + pillarSize
+    const p = padding + pillarSize / 2
+    const upRightX = (weeks - 1) * step + p
+    const v0 = new Vector3(upRightX, 0, 7 * step)
+    const v1 = new Vector3(-p, 0, 7 * step)
+    const v2 = new Vector3(
+      -(p + trapezoidDiffOfUpAndDown),
+      -trapezoidHeight,
+      7 * step + trapezoidDiffOfUpAndDown
+    )
+    const v3 = new Vector3(
+      upRightX + trapezoidDiffOfUpAndDown,
+      -trapezoidHeight,
+      7 * step + trapezoidDiffOfUpAndDown
+    )
+    const v4 = new Vector3(
+      upRightX + trapezoidDiffOfUpAndDown,
+      -trapezoidHeight,
+      -(p + trapezoidDiffOfUpAndDown)
+    )
+    const v5 = new Vector3(upRightX, 0, -p)
+    const v6 = new Vector3(-p, 0, -p)
+    const v7 = new Vector3(
+      -(p + trapezoidDiffOfUpAndDown),
+      -trapezoidHeight,
+      -(p + trapezoidDiffOfUpAndDown)
+    )
+    debugger
     // prettier-ignore
     const vertexs = new Float32Array([
       ...v0.elements, ...v1.elements, ...v2.elements, ...v3.elements, // v0-v1-v2-v3 front
@@ -218,7 +266,14 @@ class GithubContriMap {
       normals,
       colors,
       setModelMatrix: (modelMatrix) => {
-        modelMatrix.setTranslate(x, y, z).translate(0, h, 0).scale(w, h, l)
+        modelMatrix
+          .setTranslate(x, 0, z)
+          .translate(
+            -(((this.weeks - 1) * (this.pillarSize + this.pillarGap)) / 2),
+            h,
+            0
+          )
+          .scale(w, h, l)
       },
     })
   }
@@ -257,7 +312,12 @@ class GithubContriMap {
   setProjMatrix() {
     const {gl} = this
     const projMatrix = new Matrix4()
-    projMatrix.setPerspective(45, 1, 1, 500)
+    projMatrix.setPerspective(
+      100,
+      this.canvas.width / this.canvas.height,
+      1,
+      500
+    )
     const uProjMatrix = this.getVarLocation('uProjMatrix', 'Uniform')
     gl.uniformMatrix4fv(uProjMatrix, false, projMatrix.elements)
   }
@@ -265,7 +325,7 @@ class GithubContriMap {
   setViewMatrix() {
     const {gl} = this
     const viewMatrix = new Matrix4()
-    viewMatrix.setLookAt(290, 100, 180, 0, 0, 0, 0, 1, 0)
+    viewMatrix.setLookAt(100, 80, 70, 0, 0, 0, 0, 1, 0)
     const uViewMatrix = this.getVarLocation('uViewMatrix', 'Uniform')
     gl.uniformMatrix4fv(uViewMatrix, false, viewMatrix.elements)
   }
