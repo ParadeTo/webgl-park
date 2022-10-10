@@ -3,8 +3,6 @@ import vShader from './vShader'
 
 class GithubContriMap {
   constructor() {
-    fetch('/api/paradeto/2021')
-
     const canvas = document.getElementById('webgl')
     const h = document.documentElement.clientHeight
     const w = document.documentElement.clientWidth
@@ -29,30 +27,42 @@ class GithubContriMap {
   }
 
   run() {
-    const {gl} = this
-    // Specify the color for clearing <canvas>
-    gl.clearColor(0.0, 0.0, 0.0, 1.0)
-
-    // Clear <canvas>
-    gl.clear(gl.COLOR_BUFFER_BIT)
-    gl.enable(gl.DEPTH_TEST)
-
-    // Set Matrix
     this.setProjMatrix()
     this.setViewMatrix()
-
-    // Set Light
     this.setLight()
+    this.draw()
+  }
 
-    // Draw a point
-    // this.drawCubic({x: 0})
-    this.drawCubic({x: 10, h: 6})
-    // this.drawCubic({z: 10, h: 4})
-    // this.drawCubic()
-    // this.drawCubic()
-    // this.drawCubic()
-    // this.drawCubic()
-    this.drawTrapezoid()
+  async draw() {
+    const {gl} = this
+
+    try {
+      const rsp = await fetch('/api/paradeto/2021')
+      const {contributions} = await rsp.json()
+      debugger
+      if (contributions) {
+        // Specify the color for clearing <canvas>
+        gl.clearColor(0.0, 0.0, 0.0, 1.0)
+
+        // Clear <canvas>
+        gl.clear(gl.COLOR_BUFFER_BIT)
+        gl.enable(gl.DEPTH_TEST)
+        this.drawCubic()
+        contributions.forEach(({week, days}) => {
+          for (let i = 0, len = days.length; i < len; i++) {
+            const {count} = days[i]
+            if (week < 52)
+              this.drawCubic({x: week * 3, z: (7 - len + i) * 3, h: count})
+            else this.drawCubic({x: week * 3, z: i * 3, h: count})
+          }
+        })
+        this.drawTrapezoid((matrix) => {
+          // matrix.setTranslate(-1, -2, 0).translate(52, 0, 10).scale(52, 2, 12)
+        })
+      }
+    } catch (error) {
+      console.log(error)
+    }
   }
 
   drawHexahedron({vertexs, normals, colors, setModelMatrix}) {
@@ -75,28 +85,39 @@ class GithubContriMap {
     gl.drawElements(gl.TRIANGLES, n, gl.UNSIGNED_BYTE, 0)
   }
 
-  drawTrapezoid() {
-    // prettier-ignore
-    const vertexs = new Float32Array([
-      1.0, 1.0, 1.0,  -1.0, 1.0, 1.0,  -1.5,-1.0, 1.5,   1.5,-1.0, 1.5, // v0-v1-v2-v3 front
-      1.0, 1.0, 1.0,   1.5,-1.0, 1.5,   1.5,-1.0,-1.5,   1.0, 1.0,-1.0, // v0-v3-v4-v5 right
-      1.0, 1.0, 1.0,   1.0, 1.0,-1.0,  -1.0, 1.0,-1.0,  -1.0, 1.0, 1.0, // v0-v5-v6-v1 up
-      -1.0, 1.0, 1.0,  -1.0, 1.0,-1.0,  -1.5,-1.0,-1.5,  -1.5,-1.0, 1.5, // v1-v6-v7-v2 left
-      -1.5,-1.0,-1.5,   1.5,-1.0,-1.5,   1.5,-1.0, 1.5,  -1.5,-1.0, 1.5, // v7-v4-v3-v2 down
-      1.5,-1.0,-1.5,  -1.5,-1.0,-1.5,  -1.0, 1.0,-1.0,   1.0, 1.0,-1.0  // v4-v7-v6-v5 back
-    ])
+  drawTrapezoid(setModelMatrix) {
+    //    v6----- v5
+    //   /|      /|
+    //  v1------v0|
+    //  | |     | |
+    //  | |v7---|-|v4
+    //  |/      |/
+    //  v2------v3
+
     /**
      *  v0v1 = (-2, 0, 0)
      *  v0v3 = (0.5,-2,0.5)
      *  v0v1 × v0v3 = (0, 1, 4)
      */
-    const v0 = new Vector3(vertexs.slice(0, 3))
-    const v1 = new Vector3(vertexs.slice(3, 6))
-    const v2 = new Vector3(vertexs.slice(6, 9))
-    const v3 = new Vector3(vertexs.slice(9, 12))
-    const v4 = new Vector3(vertexs.slice(18, 21))
-    const v5 = new Vector3(vertexs.slice(21, 24))
-    const v6 = new Vector3(vertexs.slice(20, 33))
+    const v0 = new Vector3(159, 0, 21)
+    const v1 = new Vector3(-3.0, 0, 21)
+    const v2 = new Vector3(-6.0, -4, 24)
+    const v3 = new Vector3(162, -4, 24)
+    const v4 = new Vector3(162, -4, -6)
+    const v5 = new Vector3(159, 0, -3)
+    const v6 = new Vector3(-3, 0, -3)
+    const v7 = new Vector3(-6, -4, -6)
+
+    // prettier-ignore
+    const vertexs = new Float32Array([
+      ...v0.elements, ...v1.elements, ...v2.elements, ...v3.elements, // v0-v1-v2-v3 front
+      ...v0.elements, ...v3.elements, ...v4.elements, ...v5.elements, // v0-v3-v4-v5 right
+      ...v0.elements, ...v5.elements, ...v6.elements, ...v1.elements, // v0-v5-v6-v1 up
+      ...v1.elements, ...v6.elements, ...v7.elements, ...v2.elements, // v1-v6-v7-v2 left
+      ...v7.elements, ...v4.elements, ...v3.elements, ...v2.elements, // v7-v4-v3-v2 down
+      ...v4.elements, ...v7.elements, ...v6.elements, ...v5.elements, // v4-v7-v6-v5 back
+    ])
+
     // front
     const v0v1 = v1.sub(v0)
     const v0v3 = v3.sub(v0)
@@ -128,6 +149,16 @@ class GithubContriMap {
     ])
 
     // prettier-ignore
+    // const colors = new Float32Array([
+    //   1.0, 1.0, 0.0,   1.0, 1.0, 0.0,   1.0, 1.0, 0.0,   1.0, 1.0, 0.0,  // v0-v1-v2-v3 front
+    //   1.0, 1.0, 0.0,   1.0, 1.0, 0.0,   1.0, 1.0, 0.0,   1.0, 1.0, 0.0,  // v0-v3-v4-v5 right
+    //   1.0, 1.0, 0.0,   1.0, 1.0, 0.0,   1.0, 1.0, 0.0,   1.0, 1.0, 0.0,  // v0-v5-v6-v1 up
+    //   1.0, 1.0, 0.0,   1.0, 1.0, 0.0,   1.0, 1.0, 0.0,   1.0, 1.0, 0.0,  // v1-v6-v7-v2 left
+    //   1.0, 1.0, 0.0,   1.0, 1.0, 0.0,   1.0, 1.0, 0.0,   1.0, 1.0, 0.0,  // v7-v4-v3-v2 down
+    //   1.0, 1.0, 0.0,   1.0, 1.0, 0.0,   1.0, 1.0, 0.0,   1.0, 1.0, 0.0   // v4-v7-v6-v5 back
+    // ])
+
+    // prettier-ignore
     const colors = new Float32Array([
       1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v0-v1-v2-v3 front
       1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v0-v3-v4-v5 right
@@ -141,10 +172,11 @@ class GithubContriMap {
       vertexs,
       normals,
       colors,
+      setModelMatrix,
     })
   }
 
-  drawCubic({x = 0, y = 0, z = 0, w = 1, h = 1, l = 1}) {
+  drawCubic({x = 0, y = 0, z = 0, w = 1, h = 1, l = 1} = {}) {
     //    v6----- v5
     //   /|      /|
     //  v1------v0|
@@ -200,7 +232,7 @@ class GithubContriMap {
     )
     this.gl.uniform3f(
       uLightDirection,
-      ...new Vector3([0, 10, 10]).normalize().elements
+      ...new Vector3([0, 2, 10]).normalize().elements
     )
     this.gl.uniform3f(uLightColor, 1, 1, 1)
     this.gl.uniform3f(uAmbientLightColor, 0.3, 0.3, 0.3)
@@ -225,7 +257,7 @@ class GithubContriMap {
   setProjMatrix() {
     const {gl} = this
     const projMatrix = new Matrix4()
-    projMatrix.setPerspective(45, 1, 1, 200)
+    projMatrix.setPerspective(45, 1, 1, 500)
     const uProjMatrix = this.getVarLocation('uProjMatrix', 'Uniform')
     gl.uniformMatrix4fv(uProjMatrix, false, projMatrix.elements)
   }
@@ -233,7 +265,7 @@ class GithubContriMap {
   setViewMatrix() {
     const {gl} = this
     const viewMatrix = new Matrix4()
-    viewMatrix.setLookAt(50, 50, 50, 0, 0, 0, 0, 1, 0)
+    viewMatrix.setLookAt(290, 100, 180, 0, 0, 0, 0, 1, 0)
     const uViewMatrix = this.getVarLocation('uViewMatrix', 'Uniform')
     gl.uniformMatrix4fv(uViewMatrix, false, viewMatrix.elements)
   }
