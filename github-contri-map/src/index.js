@@ -9,7 +9,7 @@ class GithubContriMap {
     this.canvas.width = w
     this.canvas.height = h
 
-    this.pillarSize = 4
+    this.pillarSize = 3
     this.pillarGap = 0
     this.padding = 2
     this.trapezoidDiffOfUpAndDown = 3
@@ -29,7 +29,6 @@ class GithubContriMap {
     }
     this.gl = gl
 
-    this.viewMatrix = new Matrix4()
     this.rotateY = 0
     this.rotateX = 0
     this.contributions = null
@@ -57,38 +56,59 @@ class GithubContriMap {
   }
 
   addCursorEvent() {
-    const tick = () => {
-      // this.rotateY += 1
-      this.rotateX += 1
-      this.setViewMatrix()
-      this.draw()
-      requestAnimationFrame(tick)
-    }
+    // const tick = () => {
+    //   // this.rotateY += 1
+    //   // this.rotateX += 1
+    //   // this.setViewMatrix()
+    //   this.draw()
+    //   requestAnimationFrame(tick)
+    // }
     // tick()
 
-    const anglePerPixel = 1
-    let startX,
-      startY = 0
+    const debounce = (func, delay) => {
+      let debounceTimer
+      return function () {
+        const context = this
+        const args = arguments
+        clearTimeout(debounceTimer)
+        debounceTimer = setTimeout(() => func.apply(context, args), delay)
+      }
+    }
+
+    const start = debounce(() => {
+      decelerate(5, 5, 0.1)
+    }, 10)
+
+    const decelerate = (deltaY, deltaX, step) => {
+      this.rotateY += factor * deltaY * step
+      this.rotateX = Math.max(Math.min(this.rotateX + deltaX * step, 90), 0)
+      this.setViewMatrix()
+      this.draw()
+      requestAnimationFrame(() =>
+        decelerate(deltaY - step * deltaY, deltaX - step * deltaX, step)
+      )
+    }
+
+    let currentX = 0
+    let currentY = 0
     let isMouseDown = false
     this.canvas.addEventListener('mousedown', (e) => {
       isMouseDown = true
-      startX = e.clientX
-      startY = e.clientY
     })
 
+    const factor = 0.5
     this.canvas.addEventListener('mousemove', (e) => {
       if (isMouseDown) {
-        // console.log(e.clientX - startX)
-        // console.log(e.clientY - startY)
-        // const {clientX, clientY} = e
-        this.rotateY = e.clientX - startX
-        this.rotateX = e.clientY - startY
+        const dx = factor * e.movementX
+        const dy = factor * e.movementY
+        this.rotateY += factor * dx
+        this.rotateX = Math.max(Math.min(this.rotateX + dy, 90), 0)
         this.setViewMatrix()
-        // this.setViewMatrix(e.clientX - startX, -e.clientY + startY)
-        // startX = clientX
-        // startY = clientY
         this.draw()
+        start()
       }
+      currentX = e.clientX
+      currentY = e.clientY
     })
 
     this.canvas.addEventListener('mouseup', (e) => {
@@ -132,6 +152,7 @@ class GithubContriMap {
             -(6 * (this.pillarSize + this.pillarGap)) / 2
           )
         })
+        this.drawCubics(contributions)
       }
     } catch (error) {
       console.log(error)
@@ -276,6 +297,89 @@ class GithubContriMap {
     })
   }
 
+  drawCubics(contributions) {
+    const {gl} = this
+    // prettier-ignore
+    const vertexs = new Float32Array([
+      1.0, 1.0, 1.0,  -1.0, 1.0, 1.0,  -1.0,-1.0, 1.0,   1.0,-1.0, 1.0, // v0-v1-v2-v3 front
+      1.0, 1.0, 1.0,   1.0,-1.0, 1.0,   1.0,-1.0,-1.0,   1.0, 1.0,-1.0, // v0-v3-v4-v5 right
+      1.0, 1.0, 1.0,   1.0, 1.0,-1.0,  -1.0, 1.0,-1.0,  -1.0, 1.0, 1.0, // v0-v5-v6-v1 up
+      -1.0, 1.0, 1.0,  -1.0, 1.0,-1.0,  -1.0,-1.0,-1.0,  -1.0,-1.0, 1.0, // v1-v6-v7-v2 left
+      -1.0,-1.0,-1.0,   1.0,-1.0,-1.0,   1.0,-1.0, 1.0,  -1.0,-1.0, 1.0, // v7-v4-v3-v2 down
+      1.0,-1.0,-1.0,  -1.0,-1.0,-1.0,  -1.0, 1.0,-1.0,   1.0, 1.0,-1.0  // v4-v7-v6-v5 back
+    ])
+
+    // prettier-ignore
+    const normals = new Float32Array([
+      0.0, 0.0, 1.0,   0.0, 0.0, 1.0,   0.0, 0.0, 1.0,   0.0, 0.0, 1.0,  // v0-v1-v2-v3 front
+      1.0, 0.0, 0.0,   1.0, 0.0, 0.0,   1.0, 0.0, 0.0,   1.0, 0.0, 0.0,  // v0-v3-v4-v5 right
+      0.0, 1.0, 0.0,   0.0, 1.0, 0.0,   0.0, 1.0, 0.0,   0.0, 1.0, 0.0,  // v0-v5-v6-v1 up
+      -1.0, 0.0, 0.0,  -1.0, 0.0, 0.0,  -1.0, 0.0, 0.0,  -1.0, 0.0, 0.0,  // v1-v6-v7-v2 left
+      0.0,-1.0, 0.0,   0.0,-1.0, 0.0,   0.0,-1.0, 0.0,   0.0,-1.0, 0.0,  // v7-v4-v3-v2 down
+      0.0, 0.0,-1.0,   0.0, 0.0,-1.0,   0.0, 0.0,-1.0,   0.0, 0.0,-1.0   // v4-v7-v6-v5 back
+    ])
+
+    // prettier-ignore
+    const colors = new Float32Array([
+      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v0-v1-v2-v3 front
+      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v0-v3-v4-v5 right
+      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v0-v5-v6-v1 up
+      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v1-v6-v7-v2 left
+      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v7-v4-v3-v2 down
+      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0   // v4-v7-v6-v5 back
+    ])
+
+    if (!this.initArrayBuffer('aPosition', vertexs, gl.FLOAT, 3)) return
+    if (!this.initArrayBuffer('aNormal', normals, gl.FLOAT, 3)) return
+    if (!this.initArrayBuffer('aColor', colors, gl.FLOAT, 3)) return
+
+    // prettier-ignore
+    var indices = new Uint8Array([
+          0, 1, 2,   0, 2, 3,    // front
+          4, 5, 6,   4, 6, 7,    // right
+          8, 9,10,   8,10,11,    // up
+          12,13,14,  12,14,15,    // left
+          16,17,18,  16,18,19,    // down
+          20,21,22,  20,22,23     // back
+        ]);
+
+    const n = this.initElementArrayBuffer(indices)
+    const uModelMatrix = this.getVarLocation('uModelMatrix', 'Uniform')
+
+    contributions.forEach(({week, days}) => {
+      for (let i = 0, len = days.length; i < len; i++) {
+        const modelMatrix = new Matrix4()
+        const {count} = days[i]
+        let x, z, h, l, w
+        if (week < this.weeks - 1) {
+          x = week * (this.pillarSize + this.pillarGap)
+          z = (7 - len + i) * (this.pillarSize + this.pillarGap)
+          h = count
+          l = this.pillarSize / 2
+          w = this.pillarSize / 2
+        } else {
+          x = week * (this.pillarSize + this.pillarGap)
+          z = i * (this.pillarSize + this.pillarGap)
+          h = count
+          l = this.pillarSize / 2
+          w = this.pillarSize / 2
+        }
+        // console.log('count, x, z, w, h, l')
+        // console.log(count, x, z, w, h, l)
+        modelMatrix
+          .setTranslate(x, 0, z)
+          .translate(
+            -(((this.weeks - 1) * (this.pillarSize + this.pillarGap)) / 2),
+            h,
+            -(6 * (this.pillarSize + this.pillarGap)) / 2
+          )
+          .scale(w, h, l)
+        gl.uniformMatrix4fv(uModelMatrix, false, modelMatrix.elements)
+        gl.drawElements(gl.TRIANGLES, n, gl.UNSIGNED_BYTE, 0)
+      }
+    })
+  }
+
   drawCubic({x = 0, y = 0, z = 0, w = 1, h = 1, l = 1} = {}) {
     //    v6----- v5
     //   /|      /|
@@ -376,10 +480,18 @@ class GithubContriMap {
 
   setViewMatrix(rotateX = 0, rotateY = 0) {
     const {gl} = this
-    this.viewMatrix.setLookAt(0, 0, 150, 0, 0, 0, 0, 1, 0)
-    this.viewMatrix.rotate(this.rotateY, 0, 1, 0).rotate(this.rotateX, 1, 0, 0)
+    const viewMatrix = new Matrix4()
+    viewMatrix.setLookAt(0, 0, 100, 0, 0, 0, 0, 1, 0)
+
+    const angle = (Math.PI * this.rotateY) / 180
+    const s = Math.sin(angle)
+    const c = Math.cos(angle)
+
+    // to keep the same with github skyline
+    // rotate Y axis firstly then rotate the origin X axis (not the new X axis)
+    viewMatrix.rotate(this.rotateY, 0, 1, 0).rotate(this.rotateX, c, 0, s)
     const uViewMatrix = this.getVarLocation('uViewMatrix', 'Uniform')
-    gl.uniformMatrix4fv(uViewMatrix, false, this.viewMatrix.elements)
+    gl.uniformMatrix4fv(uViewMatrix, false, viewMatrix.elements)
   }
 
   initElementArrayBuffer(indices) {
