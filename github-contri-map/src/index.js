@@ -28,56 +28,108 @@ class GithubContriMap {
       return
     }
     this.gl = gl
+
+    this.viewMatrix = new Matrix4()
+    this.rotateY = 0
+    this.rotateX = 0
+    this.contributions = null
   }
 
-  run() {
+  async getData() {
+    try {
+      const rsp = await fetch('/api/paradeto/2021')
+      const {contributions} = await rsp.json()
+      this.contributions = contributions
+    } catch (error) {}
+  }
+
+  async run() {
+    await this.getData()
     this.setProjMatrix()
     this.setViewMatrix()
     this.setLight()
     this.draw()
-
+    this.addCursorEvent()
     // this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
     // this.gl.clear(this.gl.COLOR_BUFFER_BIT)
     // this.gl.enable(this.gl.DEPTH_TEST)
     // this.drawCubic()
   }
 
+  addCursorEvent() {
+    const tick = () => {
+      // this.rotateY += 1
+      this.rotateX += 1
+      this.setViewMatrix()
+      this.draw()
+      requestAnimationFrame(tick)
+    }
+    // tick()
+
+    const anglePerPixel = 1
+    let startX,
+      startY = 0
+    let isMouseDown = false
+    this.canvas.addEventListener('mousedown', (e) => {
+      isMouseDown = true
+      startX = e.clientX
+      startY = e.clientY
+    })
+
+    this.canvas.addEventListener('mousemove', (e) => {
+      if (isMouseDown) {
+        // console.log(e.clientX - startX)
+        // console.log(e.clientY - startY)
+        // const {clientX, clientY} = e
+        this.rotateY = e.clientX - startX
+        this.rotateX = e.clientY - startY
+        this.setViewMatrix()
+        // this.setViewMatrix(e.clientX - startX, -e.clientY + startY)
+        // startX = clientX
+        // startY = clientY
+        this.draw()
+      }
+    })
+
+    this.canvas.addEventListener('mouseup', (e) => {
+      isMouseDown = false
+    })
+  }
+
   async draw() {
-    const {gl} = this
+    const {gl, contributions} = this
 
     try {
-      const rsp = await fetch('/api/paradeto/2021')
-      const {contributions} = await rsp.json()
       if (contributions) {
         gl.clearColor(0.0, 0.0, 0.0, 1.0)
         gl.clear(gl.COLOR_BUFFER_BIT)
         gl.enable(gl.DEPTH_TEST)
-        contributions.forEach(({week, days}) => {
-          for (let i = 0, len = days.length; i < len; i++) {
-            const {count} = days[i]
-            if (week < this.weeks - 1)
-              this.drawCubic({
-                x: week * (this.pillarSize + this.pillarGap),
-                z: (7 - len + i) * (this.pillarSize + this.pillarGap),
-                h: count,
-                l: this.pillarSize / 2,
-                w: this.pillarSize / 2,
-              })
-            else
-              this.drawCubic({
-                x: week * (this.pillarSize + this.pillarGap),
-                z: i * (this.pillarSize + this.pillarGap),
-                h: count,
-                l: this.pillarSize / 2,
-                w: this.pillarSize / 2,
-              })
-          }
-        })
+        // contributions.forEach(({week, days}) => {
+        //   for (let i = 0, len = days.length; i < len; i++) {
+        //     const {count} = days[i]
+        //     if (week < this.weeks - 1)
+        //       this.drawCubic({
+        //         x: week * (this.pillarSize + this.pillarGap),
+        //         z: (7 - len + i) * (this.pillarSize + this.pillarGap),
+        //         h: count,
+        //         l: this.pillarSize / 2,
+        //         w: this.pillarSize / 2,
+        //       })
+        //     else
+        //       this.drawCubic({
+        //         x: week * (this.pillarSize + this.pillarGap),
+        //         z: i * (this.pillarSize + this.pillarGap),
+        //         h: count,
+        //         l: this.pillarSize / 2,
+        //         w: this.pillarSize / 2,
+        //       })
+        //   }
+        // })
         this.drawTrapezoid((matrix) => {
           matrix.translate(
             -(((this.weeks - 1) * (this.pillarSize + this.pillarGap)) / 2),
             0,
-            0
+            -(6 * (this.pillarSize + this.pillarGap)) / 2
           )
         })
       }
@@ -155,7 +207,7 @@ class GithubContriMap {
       -trapezoidHeight,
       -(p + trapezoidDiffOfUpAndDown)
     )
-    debugger
+
     // prettier-ignore
     const vertexs = new Float32Array([
       ...v0.elements, ...v1.elements, ...v2.elements, ...v3.elements, // v0-v1-v2-v3 front
@@ -271,7 +323,7 @@ class GithubContriMap {
           .translate(
             -(((this.weeks - 1) * (this.pillarSize + this.pillarGap)) / 2),
             h,
-            0
+            -(6 * (this.pillarSize + this.pillarGap)) / 2
           )
           .scale(w, h, l)
       },
@@ -322,12 +374,12 @@ class GithubContriMap {
     gl.uniformMatrix4fv(uProjMatrix, false, projMatrix.elements)
   }
 
-  setViewMatrix() {
+  setViewMatrix(rotateX = 0, rotateY = 0) {
     const {gl} = this
-    const viewMatrix = new Matrix4()
-    viewMatrix.setLookAt(100, 80, 70, 0, 0, 0, 0, 1, 0)
+    this.viewMatrix.setLookAt(0, 0, 150, 0, 0, 0, 0, 1, 0)
+    this.viewMatrix.rotate(this.rotateY, 0, 1, 0).rotate(this.rotateX, 1, 0, 0)
     const uViewMatrix = this.getVarLocation('uViewMatrix', 'Uniform')
-    gl.uniformMatrix4fv(uViewMatrix, false, viewMatrix.elements)
+    gl.uniformMatrix4fv(uViewMatrix, false, this.viewMatrix.elements)
   }
 
   initElementArrayBuffer(indices) {
