@@ -3,9 +3,12 @@ const express = require('express')
 
 const app = express()
 const cache = {}
-const buffer = []
+let buffer = []
 app.get('/api/:name/:year', async (req, res) => {
-  if (cache[req.url]) return res.end(cache[req.url])
+  if (cache[req.url]) {
+    res.json(cache[req.url])
+    return
+  }
   try {
     const rsp = await axios.get(
       `https://skyline.github.com/${req.params.name}/${req.params.year}.json`,
@@ -16,7 +19,8 @@ app.get('/api/:name/:year', async (req, res) => {
       buffer.push(chunk)
     })
     rsp.data.on('end', () => {
-      cache[req.url] = Buffer.concat(buffer).toString('utf8')
+      cache[req.url] = JSON.parse(Buffer.concat(buffer).toString('utf8'))
+      buffer = []
     })
   } catch (error) {
     res.status(500).end()

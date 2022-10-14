@@ -38,27 +38,51 @@ class GithubContriMap {
   }
 
   async getData() {
+    const $name = document.querySelector('#name')
+    const $year = document.querySelector('#year')
+    if (!$name.value || !$year.value) return
     try {
-      const rsp = await fetch('/api/paradeto/2021')
+      const rsp = await fetch(`/api/${$name.value}/${$year.value}`)
       const {contributions} = await rsp.json()
       this.contributions = contributions
     } catch (error) {}
   }
 
   async run() {
-    await this.getData()
     this.setProjMatrix()
     this.setViewMatrix()
     this.setLight()
+    this.addEventListener()
+
+    await this.getData()
     this.draw()
-    this.addCursorEvent()
-    // this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
-    // this.gl.clear(this.gl.COLOR_BUFFER_BIT)
-    // this.gl.enable(this.gl.DEPTH_TEST)
-    // this.drawCubic()
   }
 
-  addCursorEvent() {
+  async draw() {
+    const {gl} = this
+    gl.clearColor(0.0, 0.0, 0.0, 1.0)
+    gl.clear(gl.COLOR_BUFFER_BIT)
+    gl.enable(gl.DEPTH_TEST)
+
+    // draw grid
+    const uIsDrawLines = this.getVarLocation('uIsDrawLines', 'Uniform')
+    gl.uniform1i(uIsDrawLines, true)
+    this.drawGrid()
+
+    // draw cubics
+    if (!this.contributions) return
+    gl.uniform1i(uIsDrawLines, false)
+    this.drawTrapezoid((matrix) => {
+      matrix.translate(
+        -(((this.weeks - 1) * (this.pillarSize + this.pillarGap)) / 2),
+        0,
+        -(6 * (this.pillarSize + this.pillarGap)) / 2
+      )
+    })
+    this.drawCubics(this.contributions)
+  }
+
+  addEventListener() {
     // const tick = () => {
     //   // this.rotateY += 1
     //   // this.rotateX += 1
@@ -121,53 +145,11 @@ class GithubContriMap {
     this.canvas.addEventListener('mouseup', (e) => {
       isMouseDown = false
     })
-  }
 
-  async draw() {
-    const {gl, contributions} = this
-
-    try {
-      if (contributions) {
-        gl.clearColor(0.0, 0.0, 0.0, 1.0)
-        gl.clear(gl.COLOR_BUFFER_BIT)
-        gl.enable(gl.DEPTH_TEST)
-        // contributions.forEach(({week, days}) => {
-        //   for (let i = 0, len = days.length; i < len; i++) {
-        //     const {count} = days[i]
-        //     if (week < this.weeks - 1)
-        //       this.drawCubic({
-        //         x: week * (this.pillarSize + this.pillarGap),
-        //         z: (7 - len + i) * (this.pillarSize + this.pillarGap),
-        //         h: count,
-        //         l: this.pillarSize / 2,
-        //         w: this.pillarSize / 2,
-        //       })
-        //     else
-        //       this.drawCubic({
-        //         x: week * (this.pillarSize + this.pillarGap),
-        //         z: i * (this.pillarSize + this.pillarGap),
-        //         h: count,
-        //         l: this.pillarSize / 2,
-        //         w: this.pillarSize / 2,
-        //       })
-        //   }
-        // })
-        const uIsDrawLines = this.getVarLocation('uIsDrawLines', 'Uniform')
-        gl.uniform1i(uIsDrawLines, false)
-        this.drawTrapezoid((matrix) => {
-          matrix.translate(
-            -(((this.weeks - 1) * (this.pillarSize + this.pillarGap)) / 2),
-            0,
-            -(6 * (this.pillarSize + this.pillarGap)) / 2
-          )
-        })
-        this.drawCubics(contributions)
-        gl.uniform1i(uIsDrawLines, true)
-        this.drawLines()
-      }
-    } catch (error) {
-      console.log(error)
-    }
+    document.querySelector('#create').addEventListener('click', async () => {
+      await this.getData()
+      this.draw()
+    })
   }
 
   drawHexahedron({vertexs, normals, colors, setModelMatrix}) {
@@ -308,7 +290,7 @@ class GithubContriMap {
     })
   }
 
-  drawLines() {
+  drawGrid() {
     const {gl} = this
     let points = new Float32Array([0, 0.0, 1.0, 0, 0.0, -1.0])
     if (!this.initArrayBuffer('aPosition', points, gl.FLOAT, 3)) return
