@@ -15,6 +15,9 @@ class GithubContriMap {
     this.trapezoidDiffOfUpAndDown = 3
     this.trapezoidHeight = 10
     this.weeks = 53
+    this.lineSize = 0.4
+    this.lineGap = 30
+    this.lineNum = 100
 
     const gl = getWebGLContext(this.canvas)
     if (!gl) {
@@ -75,40 +78,44 @@ class GithubContriMap {
       }
     }
 
-    const start = debounce(() => {
-      decelerate(5, 5, 0.1)
-    }, 10)
+    // const start = debounce(() => {
+    //   decelerate(5, 5, 0.1)
+    // }, 10)
 
-    const decelerate = (deltaY, deltaX, step) => {
-      this.rotateY += factor * deltaY * step
-      this.rotateX = Math.max(Math.min(this.rotateX + deltaX * step, 90), 0)
-      this.setViewMatrix()
-      this.draw()
-      requestAnimationFrame(() =>
-        decelerate(deltaY - step * deltaY, deltaX - step * deltaX, step)
-      )
-    }
+    const factor = 0.5
 
-    let currentX = 0
-    let currentY = 0
+    // const decelerate = debounce((yV, xV, step) => {
+    //   this.rotateY += xV * step
+    //   this.rotateX = Math.max(Math.min(this.rotateX + yV * step, 90), 0)
+    //   this.setViewMatrix()
+    //   this.draw()
+    //   requestAnimationFrame(() =>
+    //     decelerate(yV - step * yV, xV - step * xV, step)
+    //   )
+    // }, 10)
+
+    let lastX = 0
+    let lastY = 0
     let isMouseDown = false
     this.canvas.addEventListener('mousedown', (e) => {
       isMouseDown = true
+      lastX = e.clientX
+      lastY = e.clientY
     })
 
-    const factor = 0.5
     this.canvas.addEventListener('mousemove', (e) => {
       if (isMouseDown) {
-        const dx = factor * e.movementX
-        const dy = factor * e.movementY
-        this.rotateY += factor * dx
+        const dx = factor * (e.clientX - lastX)
+        const dy = factor * (e.clientY - lastY)
+        this.rotateY += dx
         this.rotateX = Math.max(Math.min(this.rotateX + dy, 90), 0)
         this.setViewMatrix()
         this.draw()
-        start()
+
+        // decelerate(dy, dx, 0.1)
       }
-      currentX = e.clientX
-      currentY = e.clientY
+      lastX = e.clientX
+      lastY = e.clientY
     })
 
     this.canvas.addEventListener('mouseup', (e) => {
@@ -145,6 +152,8 @@ class GithubContriMap {
         //       })
         //   }
         // })
+        const uIsDrawLines = this.getVarLocation('uIsDrawLines', 'Uniform')
+        gl.uniform1i(uIsDrawLines, false)
         this.drawTrapezoid((matrix) => {
           matrix.translate(
             -(((this.weeks - 1) * (this.pillarSize + this.pillarGap)) / 2),
@@ -153,6 +162,8 @@ class GithubContriMap {
           )
         })
         this.drawCubics(contributions)
+        gl.uniform1i(uIsDrawLines, true)
+        this.drawLines()
       }
     } catch (error) {
       console.log(error)
@@ -295,6 +306,38 @@ class GithubContriMap {
       colors,
       setModelMatrix,
     })
+  }
+
+  drawLines() {
+    const {gl} = this
+    let points = new Float32Array([0, 0.0, 1.0, 0, 0.0, -1.0])
+    if (!this.initArrayBuffer('aPosition', points, gl.FLOAT, 3)) return
+    for (let i = 0; i < this.lineNum; i++) {
+      this.setModelMatrix((matrix) => {
+        matrix
+          .scale(1, 1, 2000)
+          .translate(
+            i * this.lineGap - ((this.lineNum - 1) * this.lineGap) / 2,
+            -this.trapezoidHeight * 2,
+            0
+          )
+      })
+      gl.drawArrays(gl.LINES, 0, 2)
+    }
+    points = new Float32Array([1.0, 0.0, 0.0, -1.0, 0.0, 0.0])
+    if (!this.initArrayBuffer('aPosition', points, gl.FLOAT, 3)) return
+    for (let i = 0; i < this.lineNum; i++) {
+      this.setModelMatrix((matrix) => {
+        matrix
+          .scale(2000, 1, 1)
+          .translate(
+            0,
+            -this.trapezoidHeight * 2,
+            i * this.lineGap - ((this.lineNum - 1) * this.lineGap) / 2
+          )
+      })
+      gl.drawArrays(gl.LINES, 0, 2)
+    }
   }
 
   drawCubics(contributions) {
@@ -481,7 +524,7 @@ class GithubContriMap {
   setViewMatrix(rotateX = 0, rotateY = 0) {
     const {gl} = this
     const viewMatrix = new Matrix4()
-    viewMatrix.setLookAt(0, 0, 100, 0, 0, 0, 0, 1, 0)
+    viewMatrix.setLookAt(0, 0, 95, 0, 0, 0, 0, 1, 0)
 
     const angle = (Math.PI * this.rotateY) / 180
     const s = Math.sin(angle)
