@@ -19,6 +19,13 @@ class GithubContriMap {
     this.lineSize = 0.4
     this.lineGap = 30
     this.lineNum = 100
+    this.rotateY = 0
+    this.rotateX = 0
+    this.contributions = null
+    this.charObjDoc = null
+    this.textScale = 9
+    this.year = ''
+    this.name = ''
 
     const gl = getWebGLContext(this.canvas)
     if (!gl) {
@@ -32,19 +39,20 @@ class GithubContriMap {
       return
     }
     this.gl = gl
-
-    this.rotateY = 0
-    this.rotateX = 0
-    this.contributions = null
-    this.charObjDoc = null
   }
 
-  async getData() {
+  getParams() {
     const $name = document.querySelector('#name')
     const $year = document.querySelector('#year')
     if (!$name.value || !$year.value) return
+    this.year = $year.value
+    this.name = $name.value
+  }
+
+  async getData() {
+    if (!this.name || !this.year) return
     try {
-      const rsp = await fetch(`/api/${$name.value}/${$year.value}`)
+      const rsp = await fetch(`/api/${this.name}/${this.year}`)
       const {contributions} = await rsp.json()
       this.contributions = contributions
     } catch (error) {}
@@ -56,7 +64,8 @@ class GithubContriMap {
     this.setLight()
     this.addEventListener()
 
-    // await this.getData()
+    this.getParams()
+    await this.getData()
     this.charObjDoc = await this.getParsedObjDoc('/resources/char.obj')
     this.draw()
   }
@@ -65,19 +74,34 @@ class GithubContriMap {
     try {
       const cnt = await (await fetch(filename)).text()
       const objDoc = new ObjDoc()
-      const parseResult = objDoc.parse(cnt, 30)
+      const parseResult = objDoc.parse(cnt, this.textScale)
       if (!parseResult) throw new Error('parse obj file wrong.')
-      console.log(objDoc)
       return objDoc
     } catch (error) {
       console.log(error)
     }
   }
 
-  async drawText(text) {
-    const {gl} = this
+  setUniformValue(key, value) {
+    const uVar = this.getVarLocation(key, 'Uniform')
+    this.gl.uniform1i(uVar, value)
+  }
+
+  async drawText(name, year = '') {
+    const {
+      gl,
+      textScale,
+      pillarGap,
+      pillarSize,
+      trapezoidDiffOfUpAndDown,
+      trapezoidHeight,
+      padding,
+      weeks,
+    } = this
+    const nameLen = name.length
+    const yearLen = year.length
     const {vertices, normals, indices, colors, charParams} =
-      this.charObjDoc.getDrawingInfo(text, this.charObjDoc)
+      this.charObjDoc.getDrawingInfo(name + year, this.charObjDoc)
     if (
       !this.initArrayBuffer(
         'aPosition',
@@ -94,11 +118,41 @@ class GithubContriMap {
     if (!this.initArrayBuffer('aColor', new Float32Array(colors), gl.FLOAT, 3))
       return
     this.initElementArrayBuffer(new Uint16Array(indices))
+
+    this.setUniformValue('uIsDrawText', true)
     for (let i = 0; i < charParams.length; i++) {
       const char = charParams[i]
-      this.setModelMatrix((matrix) => {
-        matrix.translate(15 * i - 60, 0, 0).scale(1, 0.5, 1)
-      })
+      // need to minus some angle to adjust
+      const theta = Math.atan(trapezoidDiffOfUpAndDown / trapezoidHeight) - 0.15
+      const deltaLen = ((pillarGap + pillarSize) * 7) / 2 + padding
+      const charW = textScale / 2 + 1.3
+      const downDis = 11
+      if (i < nameLen)
+        this.setModelMatrix((matrix) => {
+          matrix
+            .scale(1, 0.6, 1)
+            .rotate(90 - (theta * 180) / Math.PI, 1, 0, 0)
+            .translate(
+              charW * i - (weeks * (pillarGap + pillarSize)) / 2,
+              deltaLen * Math.cos(theta),
+              deltaLen * Math.sin(theta) + downDis
+            )
+          this.setNormalMatrix(matrix)
+        })
+      else {
+        this.setModelMatrix((matrix) => {
+          matrix
+            .scale(1, 0.6, 1)
+            .rotate(90 - (theta * 180) / Math.PI, 1, 0, 0)
+            .translate(
+              -charW * (yearLen - i + nameLen) +
+                (weeks * (pillarGap + pillarSize)) / 2,
+              deltaLen * Math.cos(theta),
+              deltaLen * Math.sin(theta) + downDis
+            )
+          this.setNormalMatrix(matrix)
+        })
+      }
       gl.drawElements(gl.TRIANGLES, char.n, gl.UNSIGNED_SHORT, char.offset * 2)
     }
   }
@@ -110,23 +164,24 @@ class GithubContriMap {
     gl.enable(gl.DEPTH_TEST)
 
     // draw grid
-    const uIsDrawLines = this.getVarLocation('uIsDrawLines', 'Uniform')
-    // gl.uniform1i(uIsDrawLines, true)
-    // this.drawGrid()
+    this.setUniformValue('uIsDrawLines', true)
+    this.setUniformValue('uIsDrawText', false)
+    this.drawGrid()
 
     // draw cubics
     // if (!this.contributions) return
-    gl.uniform1i(uIsDrawLines, false)
-    // this.drawTrapezoid((matrix) => {
-    //   matrix.translate(
-    //     -(((this.weeks - 1) * (this.pillarSize + this.pillarGap)) / 2),
-    //     0,
-    //     -(6 * (this.pillarSize + this.pillarGap)) / 2
-    //   )
-    // })
-    // this.drawCubics(this.contributions)
+    this.setUniformValue('uIsDrawLines', false)
 
-    this.drawText('paradeto')
+    this.drawTrapezoid((matrix) => {
+      matrix.translate(
+        -(((this.weeks - 1) * (this.pillarSize + this.pillarGap)) / 2),
+        0,
+        -(6 * (this.pillarSize + this.pillarGap)) / 2
+      )
+    })
+    this.drawCubics(this.contributions)
+
+    this.drawText(this.name.toUpperCase(), this.year)
   }
 
   addEventListener() {
@@ -194,6 +249,7 @@ class GithubContriMap {
     })
 
     document.querySelector('#create').addEventListener('click', async () => {
+      this.getParams()
       await this.getData()
       this.draw()
     })
@@ -537,6 +593,15 @@ class GithubContriMap {
     gl.uniformMatrix4fv(uModelMatrix, false, modelMatrix.elements)
   }
 
+  setNormalMatrix(modelMatrix) {
+    const {gl} = this
+    const normalMatrix = new Matrix4()
+    normalMatrix.setInverseOf(modelMatrix)
+    normalMatrix.transpose()
+    const uNormalMatrix = this.getVarLocation('uNormalMatrix', 'Uniform')
+    gl.uniformMatrix4fv(uNormalMatrix, false, normalMatrix.elements)
+  }
+
   setProjMatrix() {
     const {gl} = this
     const projMatrix = new Matrix4()
@@ -553,7 +618,7 @@ class GithubContriMap {
   setViewMatrix(rotateX = 0, rotateY = 0) {
     const {gl} = this
     const viewMatrix = new Matrix4()
-    viewMatrix.setLookAt(0, 95, 0, 0, 0, 0, 0, 0, -1)
+    viewMatrix.setLookAt(0, 0, 95, 0, 0, 0, 0, 1, 0)
 
     const angle = (Math.PI * this.rotateY) / 180
     const s = Math.sin(angle)
