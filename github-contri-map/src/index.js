@@ -1,4 +1,5 @@
 import fShader from './fShader'
+import ObjDoc from './ObjDoc'
 import vShader from './vShader'
 
 class GithubContriMap {
@@ -35,6 +36,7 @@ class GithubContriMap {
     this.rotateY = 0
     this.rotateX = 0
     this.contributions = null
+    this.charObjDoc = null
   }
 
   async getData() {
@@ -54,8 +56,51 @@ class GithubContriMap {
     this.setLight()
     this.addEventListener()
 
-    await this.getData()
+    // await this.getData()
+    this.charObjDoc = await this.getParsedObjDoc('/resources/char.obj')
     this.draw()
+  }
+
+  async getParsedObjDoc(filename) {
+    try {
+      const cnt = await (await fetch(filename)).text()
+      const objDoc = new ObjDoc()
+      const parseResult = objDoc.parse(cnt, 30)
+      if (!parseResult) throw new Error('parse obj file wrong.')
+      console.log(objDoc)
+      return objDoc
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  async drawText(text) {
+    const {gl} = this
+    const {vertices, normals, indices, colors, charParams} =
+      this.charObjDoc.getDrawingInfo(text, this.charObjDoc)
+    if (
+      !this.initArrayBuffer(
+        'aPosition',
+        new Float32Array(vertices),
+        gl.FLOAT,
+        3
+      )
+    )
+      return
+    if (
+      !this.initArrayBuffer('aNormal', new Float32Array(normals), gl.FLOAT, 3)
+    )
+      return
+    if (!this.initArrayBuffer('aColor', new Float32Array(colors), gl.FLOAT, 3))
+      return
+    this.initElementArrayBuffer(new Uint16Array(indices))
+    for (let i = 0; i < charParams.length; i++) {
+      const char = charParams[i]
+      this.setModelMatrix((matrix) => {
+        matrix.translate(15 * i - 60, 0, 0).scale(1, 0.5, 1)
+      })
+      gl.drawElements(gl.TRIANGLES, char.n, gl.UNSIGNED_SHORT, char.offset * 2)
+    }
   }
 
   async draw() {
@@ -66,20 +111,22 @@ class GithubContriMap {
 
     // draw grid
     const uIsDrawLines = this.getVarLocation('uIsDrawLines', 'Uniform')
-    gl.uniform1i(uIsDrawLines, true)
-    this.drawGrid()
+    // gl.uniform1i(uIsDrawLines, true)
+    // this.drawGrid()
 
     // draw cubics
-    if (!this.contributions) return
+    // if (!this.contributions) return
     gl.uniform1i(uIsDrawLines, false)
-    this.drawTrapezoid((matrix) => {
-      matrix.translate(
-        -(((this.weeks - 1) * (this.pillarSize + this.pillarGap)) / 2),
-        0,
-        -(6 * (this.pillarSize + this.pillarGap)) / 2
-      )
-    })
-    this.drawCubics(this.contributions)
+    // this.drawTrapezoid((matrix) => {
+    //   matrix.translate(
+    //     -(((this.weeks - 1) * (this.pillarSize + this.pillarGap)) / 2),
+    //     0,
+    //     -(6 * (this.pillarSize + this.pillarGap)) / 2
+    //   )
+    // })
+    // this.drawCubics(this.contributions)
+
+    this.drawText('paradeto')
   }
 
   addEventListener() {
@@ -506,7 +553,7 @@ class GithubContriMap {
   setViewMatrix(rotateX = 0, rotateY = 0) {
     const {gl} = this
     const viewMatrix = new Matrix4()
-    viewMatrix.setLookAt(0, 0, 95, 0, 0, 0, 0, 1, 0)
+    viewMatrix.setLookAt(0, 95, 0, 0, 0, 0, 0, 0, -1)
 
     const angle = (Math.PI * this.rotateY) / 180
     const s = Math.sin(angle)
