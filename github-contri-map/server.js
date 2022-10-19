@@ -23,6 +23,7 @@ app.get('/api/:name/:year', async (req, res) => {
       buffer = []
     })
   } catch (error) {
+    console.error(error)
     res.status(500).end()
   }
 })

@@ -156,7 +156,7 @@ export default class ObjDoc {
     return true
   }
 
-  getDrawingInfo(text, objDoc) {
+  getTextDrawingInfo(text, objDoc) {
     const charArr = text.split('')
     const vertices = []
     const normals = []
