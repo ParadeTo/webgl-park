@@ -10,8 +10,8 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /\.glsl$/,
-        loader: 'webpack-glsl-loader',
+        test: /\.(glsl|obj)$/,
+        type: 'asset/source',
       },
       {
         test: /\.js$/,
