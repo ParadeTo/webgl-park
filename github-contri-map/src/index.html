@@ -16,12 +16,13 @@
         display: flex;
         justify-content: center;
         align-items: center;
+        background-color: #222;
       }
       * {
         margin: 0;
         padding: 0;
       }
-      .container {
+      .data-container {
         display: flex;
         align-items: center;
         position: absolute;
@@ -36,6 +37,22 @@
         box-shadow: 0 0 1.75rem 0.2rem rgb(255 0 200 /70%);
         border: 1px solid #dc459f;
         color: #222;
+      }
+      .params-container {
+        color: white;
+        position: absolute;
+        right: 10px;
+        top: 10px;
+      }
+      .fields {
+        width: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 5px;
+      }
+      .point-light {
+        justify-content: flex-start;
       }
       *:focus {
         outline: none;
@@ -63,7 +80,7 @@
   </head>
   <body>
     <canvas id="webgl"> Please use a browser that supports "canvas" </canvas>
-    <div class="container">
+    <div class="data-container">
       <span>@</span>
       <input id="name" type="text" placeholder="github name" value="paradeto" />
       <select id="year" value="'2021">
@@ -74,6 +91,39 @@
         <option value="2017">2017</option>
       </select>
       <button id="create">Create</button>
+    </div>
+    <div class="params-container">
+      <div class="fields">
+        Light Color: <input type="color" id="lightColor" />
+      </div>
+      <div class="fields">
+        Object Color: <input type="color" id="objectColor" />
+      </div>
+      <div class="fields">
+        Light Position:
+        <div>
+          <div>
+            X:
+            <input type="number" style="width: 50px" id="lightX" />
+          </div>
+          <div>
+            Y:
+            <input type="number" style="width: 50px" id="lightY" />
+          </div>
+          <div>
+            Z:
+            <input type="number" style="width: 50px" id="lightZ" />
+          </div>
+        </div>
+      </div>
+      <div class="fields point-light">
+        Point Light:
+        <input
+          type="checkbox"
+          id="pointLight"
+          style="width: 20px; height: 20px; margin-left: 5px"
+        />
+      </div>
     </div>
     <script src="../lib/webgl-utils.js"></script>
     <script src="../lib/webgl-debug.js"></script>

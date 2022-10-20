@@ -44,9 +44,9 @@ void main() {
     vec3 halfVector = normalize(lightDirection + viewDirection);
     float specular = 0.0;
     if (nDotL > 0.0) {
-      specular = pow(dot(normal, halfVector), 10.0);
+      specular = pow(dot(normal, halfVector), 40.0);
     }
 
-    gl_FragColor = vec4(diffuse + ambient + specular, vColor.a);
+    gl_FragColor = vec4(diffuse + ambient + specular * uLightColor, vColor.a);
   }
 }

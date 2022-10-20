@@ -6,6 +6,7 @@ import {
   initElementArrayBuffer,
   getVarLocation,
   generateColors,
+  hexToRGBArr,
 } from '../../lib/gl-utils'
 
 class GithubContriMap {
@@ -34,8 +35,8 @@ class GithubContriMap {
     this.name = ''
     this.isPointLight = false
     this.light = {
-      position: [0, 80, 98],
-      color: [1, 0 / 255, 0.5],
+      position: [50, 100, 100],
+      color: [1, 1, 1],
     }
     this.objectsColor = [100 / 255, 100 / 255, 100 / 255]
     this.viewPosition = [0, 0, 90]
@@ -74,9 +75,7 @@ class GithubContriMap {
   async run() {
     this.setProjMatrix()
     this.setViewMatrix()
-    this.setLight()
     this.addEventListener()
-    this.setUniformValue('uIsPointLight', this.isPointLight)
 
     this.getParams()
     await this.getData()
@@ -215,6 +214,8 @@ class GithubContriMap {
     gl.clear(gl.COLOR_BUFFER_BIT)
     gl.enable(gl.DEPTH_TEST)
 
+    this.setLight()
+
     // draw grid
     this.setUniformValue('uDrawType', 2)
     this.drawGrid()
@@ -307,6 +308,39 @@ class GithubContriMap {
       this.getParams()
       await this.getData()
       this.draw()
+    })
+
+    document.querySelector('#lightColor').addEventListener('change', (e) => {
+      const color = hexToRGBArr(e.target.value)
+      this.light.color = color
+      this.draw()
+    })
+
+    document.querySelector('#objectColor').addEventListener('change', (e) => {
+      const color = hexToRGBArr(e.target.value)
+      this.objectsColor = color
+      this.draw()
+    })
+
+    document.querySelector('#pointLight').addEventListener('change', (e) => {
+      this.isPointLight = e.target.checked
+      this.draw()
+    })
+    ;[
+      document.querySelector('#lightX'),
+      document.querySelector('#lightY'),
+      document.querySelector('#lightZ'),
+    ].forEach(($, i) => {
+      $.addEventListener('change', (e) => {
+        this.light.position[i] = Number(e.target.value)
+        this.setLight()
+        this.draw()
+      })
+    })
+
+    window.addEventListener('keydown', (e) => {
+      console.log(e.key)
+      // if (e.key === '')
     })
   }
 
@@ -614,6 +648,7 @@ class GithubContriMap {
       'Uniform'
     )
     gl.uniform3f(uAmbientLightColor, 0.3, 0.3, 0.3)
+    this.setUniformValue('uIsPointLight', this.isPointLight)
 
     if (isPointLight) {
       const uLightPosition = getVarLocation(gl, 'uLightPosition', 'Uniform')
@@ -682,7 +717,6 @@ class GithubContriMap {
     // matrix.transpose()
 
     const newV = matrix.multiplyVector3(new Vector3(this.viewPosition)).elements
-    console.log(newV)
     this.setUniformValue('uViewPosition', new Float32Array(newV), 'uniform3fv')
   }
 }
