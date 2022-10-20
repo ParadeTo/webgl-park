@@ -184,9 +184,9 @@ export default class ObjDoc {
           vertices[indexIndices * 3 + 2] = vertex.z
           // Copy color
           // use the same color
-          colors[indexIndices * 3 + 0] = 1.0
-          colors[indexIndices * 3 + 1] = 1.0
-          colors[indexIndices * 3 + 2] = 1.0
+          // colors[indexIndices * 3 + 0] = 1.0
+          // colors[indexIndices * 3 + 1] = 1.0
+          // colors[indexIndices * 3 + 2] = 1.0
           // Copy normal
           var nIdx = face.nIndices[k]
           if (nIdx >= 0) {
@@ -207,7 +207,7 @@ export default class ObjDoc {
       charParams.push(char)
     }
 
-    return {vertices, normals, indices, colors, charParams}
+    return {vertices, normals, indices, charParams}
   }
 
   parseObjectName(sp) {

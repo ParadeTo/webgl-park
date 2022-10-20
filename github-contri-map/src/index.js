@@ -5,6 +5,7 @@ import {
   initArrayBuffer,
   initElementArrayBuffer,
   getVarLocation,
+  generateColors,
 } from '../../lib/gl-utils'
 
 class GithubContriMap {
@@ -18,7 +19,7 @@ class GithubContriMap {
     this.pillarSize = 3
     this.pillarGap = 0
     this.padding = 2
-    this.trapezoidDiffOfUpAndDown = 3
+    this.trapezoidDiffOfUpAndDown = 2
     this.trapezoidHeight = 10
     this.weeks = 53
     this.lineSize = 0.4
@@ -31,6 +32,13 @@ class GithubContriMap {
     this.textScale = 9
     this.year = ''
     this.name = ''
+    this.isPointLight = false
+    this.light = {
+      position: [0, 80, 98],
+      color: [1, 0 / 255, 0.5],
+    }
+    this.objectsColor = [100 / 255, 100 / 255, 100 / 255]
+    this.viewPosition = [0, 0, 90]
 
     const gl = getWebGLContext(this.canvas)
     if (!gl) {
@@ -68,6 +76,7 @@ class GithubContriMap {
     this.setViewMatrix()
     this.setLight()
     this.addEventListener()
+    this.setUniformValue('uIsPointLight', this.isPointLight)
 
     this.getParams()
     await this.getData()
@@ -87,9 +96,10 @@ class GithubContriMap {
     }
   }
 
-  setUniformValue(key, value) {
+  setUniformValue(key, value, fn) {
     const uVar = getVarLocation(this.gl, key, 'Uniform')
-    this.gl.uniform1i(uVar, value)
+    if (fn) this.gl[fn](uVar, value)
+    else this.gl.uniform1i(uVar, value)
   }
 
   // async drawMoon() {
@@ -115,13 +125,16 @@ class GithubContriMap {
   //   gl.drawArrays(gl.POINTS, 0, 102)
   // }
 
-  drawPointLight() {
-    const {gl} = this
+  drawLightSrc() {
+    const {gl, light} = this
     if (
       !initArrayBuffer(gl, 'aPosition', new Float32Array([0, 0]), gl.FLOAT, 2)
     )
       return
-    this.setModelMatrix((matrix) => matrix.translate(0, 400, 500))
+    this.setModelMatrix((matrix) => {
+      matrix.translate(...light.position)
+      this.setNormalMatrix(matrix)
+    })
     gl.drawArrays(gl.POINTS, 0, 1)
   }
 
@@ -146,7 +159,15 @@ class GithubContriMap {
       return
     if (!initArrayBuffer(gl, 'aNormal', new Float32Array(normals), gl.FLOAT, 3))
       return
-    if (!initArrayBuffer(gl, 'aColor', new Float32Array(colors), gl.FLOAT, 3))
+    if (
+      !initArrayBuffer(
+        gl,
+        'aColor',
+        new Float32Array(generateColors(vertices.length, ...this.objectsColor)),
+        gl.FLOAT,
+        3
+      )
+    )
       return
     initElementArrayBuffer(gl, new Uint16Array(indices))
 
@@ -201,13 +222,13 @@ class GithubContriMap {
     // draw cubics
     if (!this.contributions) return
     this.setUniformValue('uDrawType', 0)
-
     this.drawTrapezoid((matrix) => {
       matrix.translate(
         -(((this.weeks - 1) * (this.pillarSize + this.pillarGap)) / 2),
         0,
         -(6 * (this.pillarSize + this.pillarGap)) / 2
       )
+      this.setNormalMatrix(matrix)
     })
     this.drawCubics(this.contributions)
 
@@ -215,7 +236,7 @@ class GithubContriMap {
     this.drawText(this.name.toUpperCase(), this.year)
 
     this.setUniformValue('uDrawType', 3)
-    this.drawPointLight()
+    this.drawLightSrc()
   }
 
   addEventListener() {
@@ -410,14 +431,7 @@ class GithubContriMap {
     // ])
 
     // prettier-ignore
-    const colors = new Float32Array([
-      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v0-v1-v2-v3 front
-      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v0-v3-v4-v5 right
-      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v0-v5-v6-v1 up
-      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v1-v6-v7-v2 left
-      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v7-v4-v3-v2 down
-      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0   // v4-v7-v6-v5 back
-    ])
+    const colors = new Float32Array(generateColors(vertexs.length, ...this.objectsColor))
 
     this.drawHexahedron({
       vertexs,
@@ -440,6 +454,7 @@ class GithubContriMap {
             -this.trapezoidHeight * 2,
             0
           )
+        this.setNormalMatrix(matrix)
       })
       gl.drawArrays(gl.LINES, 0, 2)
     }
@@ -454,6 +469,7 @@ class GithubContriMap {
             -this.trapezoidHeight * 2,
             i * this.lineGap - ((this.lineNum - 1) * this.lineGap) / 2
           )
+        this.setNormalMatrix(matrix)
       })
       gl.drawArrays(gl.LINES, 0, 2)
     }
@@ -482,14 +498,7 @@ class GithubContriMap {
     ])
 
     // prettier-ignore
-    const colors = new Float32Array([
-      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v0-v1-v2-v3 front
-      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v0-v3-v4-v5 right
-      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v0-v5-v6-v1 up
-      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v1-v6-v7-v2 left
-      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,  // v7-v4-v3-v2 down
-      1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0,   1.0, 1.0, 1.0   // v4-v7-v6-v5 back
-    ])
+    const colors = new Float32Array(generateColors(vertexs.length, ...this.objectsColor))
 
     if (!initArrayBuffer(gl, 'aPosition', vertexs, gl.FLOAT, 3)) return
     if (!initArrayBuffer(gl, 'aNormal', normals, gl.FLOAT, 3)) return
@@ -536,6 +545,7 @@ class GithubContriMap {
             -(6 * (this.pillarSize + this.pillarGap)) / 2
           )
           .scale(w, h, l)
+        this.setNormalMatrix(modelMatrix)
         gl.uniformMatrix4fv(uModelMatrix, false, modelMatrix.elements)
         gl.drawElements(gl.TRIANGLES, n, gl.UNSIGNED_BYTE, 0)
       }
@@ -597,28 +607,29 @@ class GithubContriMap {
   }
 
   setLight() {
-    const {gl} = this
-    const uLightDirection = getVarLocation(gl, 'uLightDirection', 'Uniform')
-    const uLightColor = getVarLocation(gl, 'uLightColor', 'Uniform')
+    const {gl, isPointLight, light} = this
     const uAmbientLightColor = getVarLocation(
       gl,
       'uAmbientLightColor',
       'Uniform'
     )
-    this.gl.uniform3f(
-      uLightDirection,
-      ...new Vector3([0, 2, 10]).normalize().elements
-    )
-    this.gl.uniform3f(uLightColor, 1, 1, 1)
-    this.gl.uniform3f(uAmbientLightColor, 0.3, 0.3, 0.3)
-  }
+    gl.uniform3f(uAmbientLightColor, 0.3, 0.3, 0.3)
 
-  getVarLocation(name, type = 'Attrib') {
-    const loc = this.gl[`get${type}Location`](this.gl.program, name)
-    if (loc < 0 || loc === null) {
-      throw `Failed to get the storage location of ${name}`
+    if (isPointLight) {
+      const uLightPosition = getVarLocation(gl, 'uLightPosition', 'Uniform')
+      const uLightColor = getVarLocation(gl, 'uLightColor', 'Uniform')
+      gl.uniform3f(uLightPosition, ...light.position)
+      gl.uniform3f(uLightColor, ...light.color)
+    } else {
+      const uLightDirection = getVarLocation(gl, 'uLightDirection', 'Uniform')
+      const uLightColor = getVarLocation(gl, 'uLightColor', 'Uniform')
+
+      gl.uniform3f(
+        uLightDirection,
+        ...new Vector3(light.position).normalize().elements
+      )
+      gl.uniform3f(uLightColor, ...light.color)
     }
-    return loc
   }
 
   setModelMatrix(fn) {
@@ -654,7 +665,7 @@ class GithubContriMap {
   setViewMatrix(rotateX = 0, rotateY = 0) {
     const {gl} = this
     const viewMatrix = new Matrix4()
-    viewMatrix.setLookAt(0, 0, 95, 0, 0, 0, 0, 1, 0)
+    viewMatrix.setLookAt(...this.viewPosition, 0, 0, 0, 0, 1, 0)
 
     const angle = (Math.PI * this.rotateY) / 180
     const s = Math.sin(angle)
@@ -665,6 +676,14 @@ class GithubContriMap {
     viewMatrix.rotate(this.rotateY, 0, 1, 0).rotate(this.rotateX, c, 0, s)
     const uViewMatrix = getVarLocation(gl, 'uViewMatrix', 'Uniform')
     gl.uniformMatrix4fv(uViewMatrix, false, viewMatrix.elements)
+
+    const matrix = new Matrix4()
+    matrix.setInverseOf(viewMatrix)
+    // matrix.transpose()
+
+    const newV = matrix.multiplyVector3(new Vector3(this.viewPosition)).elements
+    console.log(newV)
+    this.setUniformValue('uViewPosition', new Float32Array(newV), 'uniform3fv')
   }
 }
 
