@@ -304,10 +304,21 @@ class GithubContriMap {
       isMouseDown = false
     })
 
-    document.querySelector('#create').addEventListener('click', async () => {
+    document.querySelector('#getData').addEventListener('click', async () => {
       this.getParams()
-      await this.getData()
-      this.draw()
+      window.open(
+        `https://skyline.github.com/${this.name}/${this.year}.json`,
+        '__blank'
+      )
+    })
+
+    document.querySelector('#confirm').addEventListener('click', async () => {
+      try {
+        const cnt = document.querySelector('#data').value
+        this.contributions = JSON.parse(cnt).contributions
+        this.getParams()
+        this.draw()
+      } catch (error) {}
     })
 
     document.querySelector('#lightColor').addEventListener('change', (e) => {
@@ -521,14 +532,80 @@ class GithubContriMap {
       1.0,-1.0,-1.0,  -1.0,-1.0,-1.0,  -1.0, 1.0,-1.0,   1.0, 1.0,-1.0  // v4-v7-v6-v5 back
     ])
 
-    // prettier-ignore
+    // prettier-ignoreget
     const normals = new Float32Array([
-      0.0, 0.0, 1.0,   0.0, 0.0, 1.0,   0.0, 0.0, 1.0,   0.0, 0.0, 1.0,  // v0-v1-v2-v3 front
-      1.0, 0.0, 0.0,   1.0, 0.0, 0.0,   1.0, 0.0, 0.0,   1.0, 0.0, 0.0,  // v0-v3-v4-v5 right
-      0.0, 1.0, 0.0,   0.0, 1.0, 0.0,   0.0, 1.0, 0.0,   0.0, 1.0, 0.0,  // v0-v5-v6-v1 up
-      -1.0, 0.0, 0.0,  -1.0, 0.0, 0.0,  -1.0, 0.0, 0.0,  -1.0, 0.0, 0.0,  // v1-v6-v7-v2 left
-      0.0,-1.0, 0.0,   0.0,-1.0, 0.0,   0.0,-1.0, 0.0,   0.0,-1.0, 0.0,  // v7-v4-v3-v2 down
-      0.0, 0.0,-1.0,   0.0, 0.0,-1.0,   0.0, 0.0,-1.0,   0.0, 0.0,-1.0   // v4-v7-v6-v5 back
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      1.0, // v0-v1-v2-v3 front
+      1.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0, // v0-v3-v4-v5 right
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0, // v0-v5-v6-v1 up
+      -1.0,
+      0.0,
+      0.0,
+      -1.0,
+      0.0,
+      0.0,
+      -1.0,
+      0.0,
+      0.0,
+      -1.0,
+      0.0,
+      0.0, // v1-v6-v7-v2 left
+      0.0,
+      -1.0,
+      0.0,
+      0.0,
+      -1.0,
+      0.0,
+      0.0,
+      -1.0,
+      0.0,
+      0.0,
+      -1.0,
+      0.0, // v7-v4-v3-v2 down
+      0.0,
+      0.0,
+      -1.0,
+      0.0,
+      0.0,
+      -1.0,
+      0.0,
+      0.0,
+      -1.0,
+      0.0,
+      0.0,
+      -1.0, // v4-v7-v6-v5 back
     ])
 
     // prettier-ignore
@@ -721,4 +798,29 @@ class GithubContriMap {
   }
 }
 
-window.onload = () => new GithubContriMap().run()
+function initDialog() {
+  const modal = document.querySelector('.modal')
+  const trigger = document.querySelector('#edit')
+  const closeButton = document.querySelector('.close-button')
+  const confirm = document.querySelector('#confirm')
+
+  function toggleModal() {
+    modal.classList.toggle('show-modal')
+  }
+
+  function windowOnClick(event) {
+    if (event.target === modal) {
+      toggleModal()
+    }
+  }
+
+  trigger.addEventListener('click', toggleModal)
+  closeButton.addEventListener('click', toggleModal)
+  window.addEventListener('click', windowOnClick)
+  confirm.addEventListener('click', toggleModal)
+}
+
+window.onload = () => {
+  new GithubContriMap().run()
+  initDialog()
+}
