@@ -35,11 +35,11 @@ class GithubContriMap {
     this.name = ''
     this.isPointLight = false
     this.light = {
-      position: [50, 100, 100],
+      position: [100, 500, 2000],
       color: [1, 1, 1],
     }
     this.objectsColor = [100 / 255, 100 / 255, 100 / 255]
-    this.viewPosition = [0, 0, 90]
+    this.viewPosition = [0, 0, 126000 / (w + 600)]
 
     const gl = getWebGLContext(this.canvas)
     if (!gl) {
@@ -279,30 +279,45 @@ class GithubContriMap {
     let lastX = 0
     let lastY = 0
     let isMouseDown = false
-    this.canvas.addEventListener('mousedown', (e) => {
+    const onDown = (e) => {
       isMouseDown = true
-      lastX = e.clientX
-      lastY = e.clientY
-    })
+      if (e.touches) {
+        lastX = e.touches[0].clientX
+        lastY = e.touches[0].clientY
+      } else {
+        lastX = e.clientX
+        lastY = e.clientY
+      }
+    }
+    this.canvas.addEventListener('mousedown', onDown)
+    this.canvas.addEventListener('touchstart', onDown)
 
-    this.canvas.addEventListener('mousemove', (e) => {
+    const onMove = (e) => {
+      let clientX = e.clientX
+      let clientY = e.clientY
+      if (e.touches) {
+        clientX = e.touches[0].clientX
+        clientY = e.touches[0].clientY
+      }
       if (isMouseDown) {
-        const dx = factor * (e.clientX - lastX)
-        const dy = factor * (e.clientY - lastY)
+        const dx = factor * (clientX - lastX)
+        const dy = factor * (clientY - lastY)
         this.rotateY += dx
         this.rotateX = Math.max(Math.min(this.rotateX + dy, 90), 0)
         this.setViewMatrix()
         this.draw()
-
-        // decelerate(dy, dx, 0.1)
       }
-      lastX = e.clientX
-      lastY = e.clientY
-    })
+      lastX = clientX
+      lastY = clientY
+    }
+    this.canvas.addEventListener('mousemove', onMove)
+    this.canvas.addEventListener('touchmove', onMove)
 
-    this.canvas.addEventListener('mouseup', (e) => {
+    const onEnd = (e) => {
       isMouseDown = false
-    })
+    }
+    this.canvas.addEventListener('mouseup', onEnd)
+    this.canvas.addEventListener('touchend', onEnd)
 
     document.querySelector('#getData').addEventListener('click', async () => {
       this.getParams()
@@ -768,7 +783,7 @@ class GithubContriMap {
       100,
       this.canvas.width / this.canvas.height,
       1,
-      1000
+      3000
     )
     const uProjMatrix = getVarLocation(gl, 'uProjMatrix', 'Uniform')
     gl.uniformMatrix4fv(uProjMatrix, false, projMatrix.elements)
