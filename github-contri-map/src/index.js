@@ -41,7 +41,11 @@ class GithubContriMap {
     this.objectsColor = [100 / 255, 100 / 255, 100 / 255]
     this.viewPosition = [0, 0, 126000 / (w + 600)]
 
-    const gl = getWebGLContext(this.canvas)
+    const gl = getWebGLContext(
+      this.canvas,
+      {preserveDrawingBuffer: false},
+      true
+    )
     if (!gl) {
       console.log('Failed to get the rendering context for WebGL')
       return
@@ -318,6 +322,19 @@ class GithubContriMap {
     }
     this.canvas.addEventListener('mouseup', onEnd)
     this.canvas.addEventListener('touchend', onEnd)
+
+    document.querySelector('#download').addEventListener('click', async () => {
+      let image = this.gl.canvas.toDataURL('image/png')
+      // image = image.replace('image/png', 'image/octet-stream')
+      // const $image = document.createElement('img')
+      // $image.src = image
+      // document.body.appendChild($image)
+      const $a = document.createElement('a')
+      $a.download = `github-map-${this.name}-${this.year}`
+      $a.href = image
+      const event = new MouseEvent('click')
+      $a.dispatchEvent(event)
+    })
 
     document.querySelector('#getData').addEventListener('click', async () => {
       this.getParams()
