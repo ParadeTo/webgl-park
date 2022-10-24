@@ -18,8 +18,7 @@ void main() {
   } else if (uDrawType == 3) {
     float dis = distance(gl_PointCoord, vec2(0.5, 0.5));
     if (dis < 0.5) {
-      gl_FragColor = vec4(255.0,103.0/255.0,156.0/255.0,1);
-      float e = 0.65;
+      float e = 0.6;
       float r = 0.5;
       vec4 start = vec4(uLightColor.rgb, 1);
       vec4 end = vec4(0.0, 0.0, 0.0, 1);
