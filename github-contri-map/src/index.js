@@ -8,6 +8,7 @@ import {
   generateColors,
   hexToRGBArr,
 } from '../../lib/gl-utils'
+import charObj from '../../resources/char.obj'
 
 class GithubContriMap {
   constructor() {
@@ -78,14 +79,12 @@ class GithubContriMap {
     this.addEventListener()
 
     this.getParams()
-    await this.getData()
-    this.charObjDoc = await this.getParsedObjDoc('/resources/char.obj')
+    this.charObjDoc = await this.getParsedObjDoc(charObj)
     this.draw()
   }
 
-  async getParsedObjDoc(filename) {
+  async getParsedObjDoc(cnt) {
     try {
-      const cnt = await (await fetch(filename)).text()
       const objDoc = new ObjDoc()
       const parseResult = objDoc.parse(cnt, this.textScale)
       if (!parseResult) throw new Error('parse obj file wrong.')
@@ -209,6 +208,8 @@ class GithubContriMap {
   }
 
   async draw() {
+    if (!this.contributions) return
+
     const {gl} = this
     gl.clearColor(0.0, 0.0, 0.0, 1.0)
     gl.clear(gl.COLOR_BUFFER_BIT)
@@ -221,7 +222,6 @@ class GithubContriMap {
     this.drawGrid()
 
     // draw cubics
-    if (!this.contributions) return
     this.setUniformValue('uDrawType', 0)
     this.drawTrapezoid((matrix) => {
       matrix.translate(
@@ -364,9 +364,18 @@ class GithubContriMap {
       })
     })
 
+    let isKeyDown = false
+    let rotateY = 0
+    const step = 0.1
+
+    const move = () => {
+      if (!isKeyDown) return
+    }
+
     window.addEventListener('keydown', (e) => {
-      console.log(e.key)
-      // if (e.key === '')
+      if (e.key === 'ArrowLeft') {
+      } else if (e.key === 'ArrowRight') {
+      }
     })
   }
 
@@ -789,7 +798,7 @@ class GithubContriMap {
     gl.uniformMatrix4fv(uProjMatrix, false, projMatrix.elements)
   }
 
-  setViewMatrix(rotateX = 0, rotateY = 0) {
+  setViewMatrix() {
     const {gl} = this
     const viewMatrix = new Matrix4()
     viewMatrix.setLookAt(...this.viewPosition, 0, 0, 0, 0, 1, 0)
