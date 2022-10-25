@@ -8,7 +8,8 @@ import {
   generateColors,
   hexToRGBArr,
 } from '../../lib/gl-utils'
-import charObj from '../../resources/char.obj'
+import charObj from '../../resources/char-min.obj'
+import data from '../../resources/2021.json'
 
 class GithubContriMap {
   constructor() {
@@ -29,11 +30,11 @@ class GithubContriMap {
     this.lineNum = 100
     this.rotateY = 0
     this.rotateX = 0
-    this.contributions = null
+    this.contributions = data.contributions
     this.charObjDoc = null
     this.textScale = 9
-    this.year = ''
-    this.name = ''
+    this.year = '2021'
+    this.name = 'paradeto'
     this.isPointLight = false
     this.light = {
       position: [100, 500, 2000],
@@ -56,14 +57,6 @@ class GithubContriMap {
     this.gl = gl
   }
 
-  getParams() {
-    const $name = document.querySelector('#name')
-    const $year = document.querySelector('#year')
-    if (!$name.value || !$year.value) return
-    this.year = $year.value
-    this.name = $name.value
-  }
-
   async getData() {
     if (!this.name || !this.year) return
     try {
@@ -78,7 +71,6 @@ class GithubContriMap {
     this.setViewMatrix()
     this.addEventListener()
 
-    this.getParams()
     this.charObjDoc = await this.getParsedObjDoc(charObj)
     this.draw()
   }
@@ -318,23 +310,6 @@ class GithubContriMap {
     }
     this.canvas.addEventListener('mouseup', onEnd)
     this.canvas.addEventListener('touchend', onEnd)
-
-    document.querySelector('#getData').addEventListener('click', async () => {
-      this.getParams()
-      window.open(
-        `https://skyline.github.com/${this.name}/${this.year}.json`,
-        '__blank'
-      )
-    })
-
-    document.querySelector('#confirm').addEventListener('click', async () => {
-      try {
-        const cnt = document.querySelector('#data').value
-        this.contributions = JSON.parse(cnt).contributions
-        this.getParams()
-        this.draw()
-      } catch (error) {}
-    })
 
     document.querySelector('#lightColor').addEventListener('change', (e) => {
       const color = hexToRGBArr(e.target.value)
@@ -822,29 +797,6 @@ class GithubContriMap {
   }
 }
 
-function initDialog() {
-  const modal = document.querySelector('.modal')
-  const trigger = document.querySelector('#edit')
-  const closeButton = document.querySelector('.close-button')
-  const confirm = document.querySelector('#confirm')
-
-  function toggleModal() {
-    modal.classList.toggle('show-modal')
-  }
-
-  function windowOnClick(event) {
-    if (event.target === modal) {
-      toggleModal()
-    }
-  }
-
-  trigger.addEventListener('click', toggleModal)
-  closeButton.addEventListener('click', toggleModal)
-  window.addEventListener('click', windowOnClick)
-  confirm.addEventListener('click', toggleModal)
-}
-
 window.onload = () => {
   new GithubContriMap().run()
-  initDialog()
 }
