@@ -1,6 +1,6 @@
-// import '@babylonjs/core/Debug/debugLayer'
-// import '@babylonjs/inspector'
-// import '@babylonjs/loaders/glTF'
+import '@babylonjs/core/Debug/debugLayer'
+import '@babylonjs/inspector'
+import '@babylonjs/loaders/glTF'
 import {
   Engine,
   Scene,
@@ -9,8 +9,9 @@ import {
   HemisphericLight,
   Mesh,
   MeshBuilder,
+  SceneLoader,
 } from '@babylonjs/core'
-
+import init from './demos/village'
 class App {
   constructor() {
     // create the canvas html element and attach it to the webpage
@@ -24,21 +25,7 @@ class App {
     var engine = new Engine(canvas, true)
     var scene = new Scene(engine)
 
-    var camera: ArcRotateCamera = new ArcRotateCamera(
-      'Camera',
-      Math.PI / 2,
-      Math.PI / 2,
-      2,
-      Vector3.Zero(),
-      scene
-    )
-    camera.attachControl(canvas, true)
-    var light1: HemisphericLight = new HemisphericLight(
-      'light1',
-      new Vector3(1, 1, 0),
-      scene
-    )
-    var sphere: Mesh = MeshBuilder.CreateSphere('sphere', {diameter: 1}, scene)
+    init(engine, scene)
 
     // hide/show the Inspector
     window.addEventListener('keydown', (ev) => {
