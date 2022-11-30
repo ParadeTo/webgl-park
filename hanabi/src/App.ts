@@ -5,7 +5,9 @@ import {
   Vector3,
   ArcRotateCamera,
   MeshBuilder,
+  SceneLoader,
 } from '@babylonjs/core'
+import Player from './Player'
 
 export default class App {
   private canvas!: HTMLCanvasElement
@@ -25,12 +27,16 @@ export default class App {
       new Vector3(0, 0, 0),
       scene
     )
-    const box = MeshBuilder.CreateBox('box', {size: 2}, scene)
+    // const box = MeshBuilder.CreateBox('box', {size: 2}, scene)
 
     engine.runRenderLoop(function () {
       scene.render()
     })
-    // scene.render()
+
+    scene.debugLayer.show()
+
+    const player = new Player(scene)
+    player.load()
   }
 
   private createCanvas(): HTMLCanvasElement {
