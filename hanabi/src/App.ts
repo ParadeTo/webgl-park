@@ -7,6 +7,8 @@ import {
   MeshBuilder,
   SceneLoader,
 } from '@babylonjs/core'
+import Ground from './Ground'
+import Box from './map/Box'
 import Player from './Player'
 
 export default class App {
@@ -27,6 +29,7 @@ export default class App {
       new Vector3(0, 0, 0),
       scene
     )
+    camera.attachControl(this.canvas)
     // const box = MeshBuilder.CreateBox('box', {size: 2}, scene)
 
     engine.runRenderLoop(function () {
@@ -37,6 +40,9 @@ export default class App {
 
     const player = new Player(scene)
     player.load()
+
+    new Ground(scene)
+    new Box(scene)
   }
 
   private createCanvas(): HTMLCanvasElement {

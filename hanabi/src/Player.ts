@@ -52,6 +52,7 @@ export default class Player {
     outer.checkCollisions = true
     // 改变了 mesh 的顶点坐标
     outer.bakeTransformIntoVertices(Matrix.Translation(0, 1.5, 0))
+    outer.scaling = new Vector3(0.5, 0.5, 0.5)
 
     const result = await SceneLoader.ImportMeshAsync(
       null,
