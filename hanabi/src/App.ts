@@ -8,13 +8,16 @@ import {
   SceneLoader,
 } from '@babylonjs/core'
 import Ground from './Ground'
+import InputController from './InputController'
 import Box from './map/Box'
 import Player from './Player'
+import Axis from './Axis'
 
 export default class App {
   private canvas!: HTMLCanvasElement
   private scene: Scene
   private engine: Engine
+  input: InputController
 
   constructor() {
     this.createCanvas()
@@ -23,14 +26,13 @@ export default class App {
     const light = new HemisphericLight('light', new Vector3(0, 1, 0), scene)
     const camera = new ArcRotateCamera(
       'camera',
-      1,
+      (3 / 2) * Math.PI,
       1,
       10,
       new Vector3(0, 0, 0),
       scene
     )
-    camera.attachControl(this.canvas)
-    // const box = MeshBuilder.CreateBox('box', {size: 2}, scene)
+    // camera.attachControl(this.canvas)
 
     engine.runRenderLoop(function () {
       scene.render()
@@ -38,11 +40,13 @@ export default class App {
 
     scene.debugLayer.show()
 
-    const player = new Player(scene)
-    player.load()
+    const input = new InputController(scene)
+    const player = new Player(scene, input)
+    player.init()
 
     new Ground(scene)
     new Box(scene)
+    new Axis(scene)
   }
 
   private createCanvas(): HTMLCanvasElement {
