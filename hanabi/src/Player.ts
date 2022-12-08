@@ -36,7 +36,7 @@ export default class Player {
       m.isPickable = false
     })
 
-    this.idle = result.animationGroups[1]
+    this.idle = result.animationGroups[0]
     this.idle.loopAnimation = true
     this.idle.play(true)
 

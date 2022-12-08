@@ -12,6 +12,7 @@ import InputController from './InputController'
 import Box from './map/Box'
 import Player from './Player'
 import Axis from './Axis'
+import LoadModel from './demo/loadModel'
 
 export default class App {
   private canvas!: HTMLCanvasElement
@@ -47,6 +48,8 @@ export default class App {
     new Ground(scene)
     new Box(scene)
     new Axis(scene)
+
+    // LoadModel.load(scene, 'test')
   }
 
   private createCanvas(): HTMLCanvasElement {
