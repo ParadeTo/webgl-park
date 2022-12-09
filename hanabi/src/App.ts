@@ -49,7 +49,7 @@ export default class App {
     new Box(scene)
     new Axis(scene)
 
-    // LoadModel.load(scene, 'test')
+    // LoadModel.load(scene, 'untitled-1')
   }
 
   private createCanvas(): HTMLCanvasElement {

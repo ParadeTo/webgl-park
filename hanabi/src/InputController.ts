@@ -4,7 +4,7 @@ const step = 0.2
 const interval = 5
 export default class InputController {
   private scene: Scene
-  private input: string
+  public input: string
   verticalAxis: number
   vertical: any
   horizontal: number
@@ -28,7 +28,6 @@ export default class InputController {
   }
 
   private updateFromKeyboard(): void {
-    console.log(this.input)
     switch (this.input) {
       case 'ArrowUp':
         this.verticalAxis = 1

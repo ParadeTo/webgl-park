@@ -16,10 +16,16 @@ export default class Player {
 
   public mesh: Mesh
 
-  private idle: AnimationGroup
   private input: InputController
+  private currentAnim: AnimationGroup
+  private prevAnim: AnimationGroup
   deltaTime: number
   moveDirection: Vector3
+
+  private run: AnimationGroup
+  private walk: AnimationGroup
+  private idle: AnimationGroup
+  private push: AnimationGroup
 
   constructor(scene: Scene, input: InputController) {
     this.scene = scene
@@ -29,6 +35,8 @@ export default class Player {
   async init() {
     this.mesh = this.createOuter()
     const result = await this.load()
+    console.log(result.animationGroups)
+
     const body = result.meshes[0]
     body.parent = this.mesh
     body.isPickable = false
@@ -36,13 +44,44 @@ export default class Player {
       m.isPickable = false
     })
 
-    this.idle = result.animationGroups[0]
-    this.idle.loopAnimation = true
-    this.idle.play(true)
+    this.setupAnimation(result.animationGroups)
 
     this.scene.registerBeforeRender(() => {
       this.updateFromControls()
+      this.animate()
     })
+  }
+
+  private setupAnimation(animationGroups: AnimationGroup[]) {
+    this.idle = animationGroups[0]
+    this.run = animationGroups[3]
+    this.walk = animationGroups[4]
+    this.push = animationGroups[2]
+    this.run.loopAnimation = true
+    this.idle.loopAnimation = true
+    this.walk.loopAnimation = true
+    this.push.loopAnimation = true
+
+    this.scene.stopAllAnimations()
+
+    //initialize current and previous
+    this.currentAnim = this.idle
+    this.prevAnim = this.idle
+    this.currentAnim.play(true)
+  }
+
+  private animate() {
+    if (this.input.input) {
+      this.currentAnim = this.push
+    } else {
+      this.currentAnim = this.idle
+    }
+
+    if (this.currentAnim != null && this.prevAnim !== this.currentAnim) {
+      this.prevAnim.stop()
+      this.currentAnim.play(this.currentAnim.loopAnimation)
+      this.prevAnim = this.currentAnim
+    }
   }
 
   private updateFromControls(): void {
@@ -102,7 +141,7 @@ export default class Player {
     return SceneLoader.ImportMeshAsync(
       null,
       '/models/',
-      'player.glb',
+      'diycharacter.glb',
       this.scene
     )
   }
