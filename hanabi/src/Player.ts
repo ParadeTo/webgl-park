@@ -3,6 +3,7 @@ import {
   Matrix,
   Mesh,
   MeshBuilder,
+  PhysicsImpostor,
   Quaternion,
   Scalar,
   Scene,
@@ -66,13 +67,15 @@ export default class Player {
 
     //initialize current and previous
     this.currentAnim = this.idle
-    this.prevAnim = this.idle
+    this.prevAnim = this.push
     this.currentAnim.play(true)
   }
 
   private animate() {
-    if (this.input.input) {
+    if (this.input.pushKeyDown) {
       this.currentAnim = this.push
+    } else if (this.input.horizontal || this.input.vertical) {
+      this.currentAnim = this.walk
     } else {
       this.currentAnim = this.idle
     }
@@ -112,12 +115,16 @@ export default class Player {
       Math.abs(this.mesh.rotation.y - angle2)
     )
       angle = angle2
-    this.mesh.rotation.y = +Scalar.Lerp(
-      this.mesh.rotation.y,
-      angle,
+    // this.mesh.rotation.y = +Scalar.Lerp(
+    //   this.mesh.rotation.y,
+    //   angle,
+    //   10 * this.deltaTime
+    // )
+    this.mesh.rotationQuaternion = Quaternion.Slerp(
+      this.mesh.rotationQuaternion,
+      Quaternion.FromEulerAngles(0, angle, 0),
       10 * this.deltaTime
     )
-
     this.mesh.moveWithCollisions(this.moveDirection)
   }
 
@@ -125,15 +132,21 @@ export default class Player {
     //collision mesh
     const outer = MeshBuilder.CreateBox(
       'outer',
-      {width: 2, depth: 1, height: 3},
+      {width: 3.4, depth: 3.4, height: 3},
       this.scene
     )
     outer.isVisible = false
-    outer.isPickable = false
-    outer.checkCollisions = true
+    // outer.isPickable = false
+    // outer.checkCollisions = true
     // 改变了 mesh 的顶点坐标
     outer.bakeTransformIntoVertices(Matrix.Translation(0, 1.5, 0))
     outer.scaling = new Vector3(0.5, 0.5, 0.5)
+    outer.physicsImpostor = new PhysicsImpostor(
+      outer,
+      PhysicsImpostor.BoxImpostor,
+      {mass: 2, friction: 0.1, restitution: 0.7},
+      this.scene
+    )
     return outer
   }
 

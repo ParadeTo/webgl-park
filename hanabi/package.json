@@ -19,6 +19,7 @@
     "@babylonjs/gui-editor": "^5.34.0",
     "@babylonjs/loaders": "^5.34.0",
     "@babylonjs/materials": "^5.34.0",
-    "@babylonjs/serializers": "^5.34.0"
+    "@babylonjs/serializers": "^5.34.0",
+    "cannon": "^0.6.2"
   }
 }

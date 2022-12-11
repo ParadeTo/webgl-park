@@ -8,6 +8,7 @@ specifiers:
   '@babylonjs/loaders': ^5.34.0
   '@babylonjs/materials': ^5.34.0
   '@babylonjs/serializers': ^5.34.0
+  cannon: ^0.6.2
   typescript: ^4.6.4
   vite: ^3.2.4
 
@@ -17,6 +18,7 @@ dependencies:
   '@babylonjs/loaders': 5.34.0_@babylonjs+core@5.34.0
   '@babylonjs/materials': 5.34.0_@babylonjs+core@5.34.0
   '@babylonjs/serializers': 5.34.0_@babylonjs+core@5.34.0
+  cannon: 0.6.2
 
 devDependencies:
   '@babylonjs/core': 5.34.0
@@ -140,6 +142,10 @@ packages:
     dependencies:
       '@fortawesome/fontawesome-common-types': 6.2.1
     dev: true
+
+  /cannon/0.6.2:
+    resolution: {integrity: sha512-n/7wWSXr8KOSvjad2x0fJHgpMepKjOKi+NdSnjfYyijoDBZnp4JQKgPcpv28jlXoWM+N9zVYU09J0A6Qxx+Y7w==}
+    dev: false
 
   /esbuild-android-64/0.15.16:
     resolution: {integrity: sha512-Vwkv/sT0zMSgPSVO3Jlt1pUbnZuOgtOQJkJkyyJFAlLe7BiT8e9ESzo0zQSx4c3wW4T6kGChmKDPMbWTgtliQA==}

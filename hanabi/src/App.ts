@@ -6,6 +6,7 @@ import {
   ArcRotateCamera,
   MeshBuilder,
   SceneLoader,
+  CannonJSPlugin,
 } from '@babylonjs/core'
 import Ground from './Ground'
 import InputController from './InputController'
@@ -35,6 +36,8 @@ export default class App {
     )
     // camera.attachControl(this.canvas)
 
+    this.initPhysics()
+
     engine.runRenderLoop(function () {
       scene.render()
     })
@@ -50,6 +53,12 @@ export default class App {
     new Axis(scene)
 
     // LoadModel.load(scene, 'untitled-1')
+  }
+
+  private initPhysics() {
+    const gravityVector = new Vector3(0, -9.81, 0)
+    const physicsPlugin = new CannonJSPlugin()
+    this.scene.enablePhysics(gravityVector, physicsPlugin)
   }
 
   private createCanvas(): HTMLCanvasElement {
