@@ -130,12 +130,12 @@ export default class Player {
 
   private createOuter() {
     //collision mesh
-    const outer = MeshBuilder.CreateBox(
+    const outer = MeshBuilder.CreateCylinder(
       'outer',
-      {width: 3.4, depth: 3.4, height: 3},
+      {diameter: 1.6, height: 3},
       this.scene
     )
-    outer.isVisible = false
+    outer.isVisible = true
     // outer.isPickable = false
     // outer.checkCollisions = true
     // 改变了 mesh 的顶点坐标
@@ -147,6 +147,7 @@ export default class Player {
       {mass: 2, friction: 0.1, restitution: 0.7},
       this.scene
     )
+    outer.physicsImpostor.dispose()
     return outer
   }
 
